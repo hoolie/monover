@@ -56,12 +56,12 @@ let pDescriptions = many1 pDescriptionSection
 let pChangeset =
     pAffectedProjectsSection .>>. pDescriptions
     |>> (fun (projects, descriptions) ->
-        { Id = Id("45") // Dummy ID, can be enhanced to parse from input if needed
+        {  
           AffectedProjects = projects
           Descriptions = descriptions })
 
 // Parser for all sections of descriptions
-let Parse markdown : Result<Changeset, string> =
+let Parse markdown : Result<ChangesetContent, string> =
     match run pChangeset markdown with
     | Success(changeset, _, _) -> Result.Ok changeset
     | Failure(errorMessage, _, _) -> Result.Error errorMessage

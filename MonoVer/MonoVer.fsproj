@@ -11,6 +11,7 @@
         <Compile Include="ChangesetParser.fs" />
         <Compile Include="Changelog.fs" />
         <Compile Include="ProjectStructure.fs" />
+        <Compile Include="Publish.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

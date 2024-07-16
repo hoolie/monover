@@ -1,6 +1,5 @@
 module MonoVer.Test.ChangesetParserTests
 
-
 open Xunit
 open FsUnit
 open MonoVer.ChangesetParser
@@ -9,7 +8,7 @@ open MonoVer.Changeset
 type ChangesetParserTests() =
 
     let createExpectedChangeset() =
-        { Id = ChangesetId.Id "45"
+        {
           AffectedProjects = [ { Project = Csproj "ProjectA"; Impact = SemVerImpact.Major }
                                { Project = Csproj "ProjectB"; Impact = SemVerImpact.Minor } ]
           Descriptions = [ Added [ "Added some new features" ]
@@ -82,7 +81,7 @@ Fixed some bugs
 Changed some functionality
 """
         let expected = 
-            { Id = ChangesetId.Id "45"
+            {
               AffectedProjects = [ { Project = Csproj "ProjectA"; Impact = SemVerImpact.Major }
                                    { Project = Csproj "ProjectB"; Impact = SemVerImpact.Minor } ]
               Descriptions = [ Added [ "Added some new features" ]

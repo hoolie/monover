@@ -26,8 +26,12 @@ type Description =
     | Fixed of string list
     | Security of string list
 type ChangesetId = Id of string
-type Changeset =
+type ChangesetContent =
     {
-      Id: ChangesetId
       AffectedProjects: AffectedProject list
       Descriptions: Description list }
+    
+type Changeset = {
+    Id: ChangesetId
+    Content: ChangesetContent
+}
