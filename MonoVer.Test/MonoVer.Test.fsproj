@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ChangelogTests.fs" />
     <Compile Include="PublishTests.fs" />
     <Compile Include="ChangesetParserTests.fs" />
   </ItemGroup>

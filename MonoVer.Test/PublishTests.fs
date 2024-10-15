@@ -1,4 +1,4 @@
-module Tests
+module MonoVer.Test.PublishTests
 
 open System.IO
 open MonoVer.ChangelogEntry

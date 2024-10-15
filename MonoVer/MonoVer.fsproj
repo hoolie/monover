@@ -6,7 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="ChangelogParser.fs" />
         <Compile Include="ResultBuilder.fs" />
         <Compile Include="Version.fs" />
         <Compile Include="Changeset.fs" />
