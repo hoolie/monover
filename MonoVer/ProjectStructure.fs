@@ -9,3 +9,9 @@ type Project = {
     Dependencies: Project list
 }
 
+let Create csproj currentVersion dependencies: Project = {
+    Csproj = csproj
+    CurrentVersion = currentVersion
+    Dependencies = dependencies 
+}
+
