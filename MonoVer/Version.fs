@@ -21,7 +21,7 @@ let Create major minor patch =
 
 let versionRegexPattern = @"\s*(\d+)\.(\d+)\.(\d+)(?:\.\d+)?(?:-[^<\s]+)?\s*"
 
-let MatchVersion (content: string) : Result<GroupCollection, VersionParsingError> =
+let private MatchVersion (content: string) : Result<GroupCollection, VersionParsingError> =
     let RegexMatch = Regex.Match(content, versionRegexPattern)
 
     if RegexMatch.Success then

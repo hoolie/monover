@@ -14,14 +14,21 @@
         <Compile Include="ProjectStructure.fs" />
         <Compile Include="SlnParser.fs" />
         <Compile Include="Publish.fs" />
+        <Compile Include="UpdateCsproj.fs" />
+        <Compile Include="PublishCommand.fs" />
+        <Compile Include="ApplicationError.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="CommandLineParser" Version="2.9.1" />
       <PackageReference Include="FParsec" Version="1.1.1" />
+      <PackageReference Include="FSharpPlus" Version="1.6.1" />
       <PackageReference Include="Microsoft.Build" Version="17.11.4" ExcludeAssets="runtime" />
       <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime" />
       <PackageReference Include="Microsoft.Build.Locator" Version="1.7.8" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>

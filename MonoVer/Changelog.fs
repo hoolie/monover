@@ -1,11 +1,13 @@
 module MonoVer.ChangelogEntry
 
 open System
+open System.IO
 open System.Text.RegularExpressions
 open MonoVer.Changeset
 open MonoVer.Version
 
 type Changelog  = {
+    Path: FileInfo
     Content: string
 }
 type Descriptions = {
@@ -79,4 +81,4 @@ let AddEntryToChangelog (entry: ChangelogVersionEntry) (rawChangelog: Changelog)
         match firstVersionLine with
         | Some lineNumber -> (List.take lineNumber lines)  @ formattedEntry @ (List.skip lineNumber lines)
         | None -> lines @ formattedEntry 
-    {Content = String.Join( Environment.NewLine, newChangelog) }
+    {Content = String.Join( Environment.NewLine, newChangelog); Path = rawChangelog.Path }
