@@ -9,21 +9,14 @@ open MonoVer.ProjectStructure
 type SlnProject = FileInfo * Version.Version
 type SlnProjectWithReferences = SlnProject * FileInfo seq
 
-type Solution =
-    { Path: DirectoryInfo
-      Projects: SlnProject array }
+type MsProject = Microsoft.Build.Evaluation.Project
+type MsSolution = Map<string, MsProject>
 
-type Node =
-    { Project: SlnProject
-      References: SlnProject seq }
-
-
-let LoadProjects (slnFile: SolutionFile) : Microsoft.Build.Evaluation.Project list =
+let LoadProjects (slnFile: SolutionFile) : MsSolution =
     slnFile.ProjectsInOrder
         |> Seq.filter (fun p -> p.ProjectType = SolutionProjectType.KnownToBeMSBuildFormat)
-        |> Seq.map (fun p -> Project(p.AbsolutePath))
-        |> Seq.toList
-                
+        |> Seq.map (fun p -> (p.AbsolutePath, Project(p.AbsolutePath)))
+        |> Map
 
 let ParseLoadedProject (p: Microsoft.Build.Evaluation.Project): SlnProjectWithReferences =
         let version = Version.FromString(p.GetPropertyValue("Version"))
@@ -90,7 +83,7 @@ let createGraph (projectsWithRefs: SlnProjectWithReferences seq) =
     // Step 3: Resolve all projects starting from each project in the input
     projectsWithRefs |> Seq.map fst |> Seq.map resolveProject |> Seq.toList // Convert to list or keep as sequence
 
-let getProjects (slnFile: SolutionFile) : Project list =
-    LoadProjects slnFile
+let getProjects (msProjects: MsProject seq) : Project list =
+    msProjects
     |> Seq.map ParseLoadedProject
     |> createGraph
