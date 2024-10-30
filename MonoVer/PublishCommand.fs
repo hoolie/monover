@@ -36,12 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 """
 
-let ReadChangelogFor (csproj: FileInfo) : Changelog =
-    { Path = FileInfo(Path.Join(csproj.DirectoryName, "Changelog.md"))
+let ReadChangelogFor (Csproj path: Csproj) : Changelog =
+    let csprojDir = FileInfo(path).DirectoryName
+    let path = FileInfo(Path.Join(csprojDir, "Changelog.md"))
+    { Path = path
       Content =
-        match csproj.Directory.GetFiles("Changelog.md") |> Seq.tryHead with
-        | None -> CHANGELOG_TEMPLATE
-        | Some value -> File.ReadAllText value.FullName }
+        match path.Exists with
+        | false -> CHANGELOG_TEMPLATE
+        | true  -> File.ReadAllText path.FullName }
 
 let private loadRawChangesets =
     DirectoryInfo 
@@ -56,7 +58,7 @@ let private loadSolution workdir =
     | files -> Error(MultipleSolutionFilesFoundInWorkdir files)
    
 let private updateVersion solution (newVersion: VersionIncreased) =
-     Console.WriteLine $"Increase version of '{newVersion.Project.FullName}' to '{Version.ToString newVersion.Version}'"
+     Console.WriteLine $"Increase version of '{newVersion.Project}' to '{Version.ToString newVersion.Version}'"
      ApplyChanges solution newVersion
      |> Result.mapError PublishDomainErrors.UpdateVersionError
                                       
@@ -98,5 +100,5 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
         | PublishError (FailedToParseChangeset (Id x,e)) -> CommandError (-4, $"""Failed to parse Changeset with name {x}.md:{e}""" )
         | SolutionFileNotFoundInWorkdir x -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
         | MultipleSolutionFilesFoundInWorkdir x -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
-        | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project.FullName} to version {Version.ToString e.Version} ")
+        | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project} to version {Version.ToString e.Version} ")
         )

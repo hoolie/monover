@@ -27,7 +27,7 @@ module Changeset =
     let private pAffectedProject =
         projectName .>>. (pchar ':' >>. spaces >>. pImpact)
         |>> (fun (name, impact) ->
-            { Project = Csproj name
+            { Project = TargetProject name
               Impact = impact })
 
     // Parser for multiple lines of project impact
@@ -82,7 +82,7 @@ module Changesets =
     let private dependsOn (dependant: Project) (project: Project) =
         project.Dependencies |> List.exists (fun x -> x.Csproj = dependant.Csproj)
 
-    let private findProjectByCsproj (projects: Project list) (Csproj csproj: TargetProject) =
+    let private findProjectByCsproj (projects: Project list) (TargetProject csproj: TargetProject) =
         projects |> List.find (fun p -> p.Csproj.FullName = (FileInfo csproj).FullName)
 
     let private projectChangeFromAffectedProject
@@ -151,11 +151,11 @@ module Changesets =
             Descriptions.merge (filteredChanges |> List.collect _.Descriptions)
 
         [ NewChangelogEntry
-              { Project = project.Csproj
+              { Project = Csproj project.Csproj.FullName
                 Changes = descriptions
                 Version = nextVersion }
           VersionIncreased
-              { Project = project.Csproj
+              { Project = Csproj project.Csproj.FullName
                 Version = nextVersion } ]
     open FSharpPlus
     let Publish projects : ProcessChangesets =

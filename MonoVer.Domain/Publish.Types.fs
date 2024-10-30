@@ -1,9 +1,7 @@
 namespace MonoVer.Domain.Types
 
-open System.IO
-
-type NewChangelogEntry = { Project: FileInfo; Changes: Descriptions; Version: Version  }
-type VersionIncreased = { Project: FileInfo; Version: Version  }
+type NewChangelogEntry = { Project: Csproj; Changes: Descriptions; Version: Version  }
+type VersionIncreased = { Project: Csproj; Version: Version  }
 
 type PublishError =  FailedToParseChangeset of (ChangesetId * string)
    

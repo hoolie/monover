@@ -9,8 +9,8 @@ type ChangesetParserTests() =
 
     let createExpectedChangeset() =
         {
-          AffectedProjects = [ { Project = Csproj "ProjectA"; Impact = SemVerImpact.Major }
-                               { Project = Csproj "ProjectB"; Impact = SemVerImpact.Minor } ]
+          AffectedProjects = [ { Project = TargetProject "ProjectA"; Impact = SemVerImpact.Major }
+                               { Project = TargetProject "ProjectB"; Impact = SemVerImpact.Minor } ]
           Descriptions = [ Added [ "Added some new features" ]
                            Fixed [ "Fixed some bugs" ] ] }
 
@@ -82,8 +82,8 @@ Changed some functionality
 """
         let expected = 
             {
-              AffectedProjects = [ { Project = Csproj "ProjectA"; Impact = SemVerImpact.Major }
-                                   { Project = Csproj "ProjectB"; Impact = SemVerImpact.Minor } ]
+              AffectedProjects = [ { Project = TargetProject "ProjectA"; Impact = SemVerImpact.Major }
+                                   { Project = TargetProject "ProjectB"; Impact = SemVerImpact.Minor } ]
               Descriptions = [ Added [ "Added some new features" ]
                                Fixed [ "Fixed some bugs" ]
                                Changed [ "Changed some functionality" ] ] }

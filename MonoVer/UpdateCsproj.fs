@@ -12,8 +12,9 @@ let private setVersion  (version: Version) (project: Project)=
    project
    
 let ApplyChanges (solution: MsSolution) (results: VersionIncreased ) =
+    let (Csproj csprojPath) = results.Project
     let changedProject =
-            solution.TryFind results.Project.FullName
+            solution.TryFind csprojPath
             |>> setVersion results.Version
     match changedProject with
     | Some proj -> Ok (proj.Save())

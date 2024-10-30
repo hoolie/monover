@@ -2,6 +2,7 @@ namespace MonoVer.Domain.Types
 
 open System.IO
 
+type Csproj = Csproj of string
 type Version =
     { Major: uint
       Minor: uint
@@ -43,7 +44,7 @@ type ChangesetId = Id of string
 type RawChangeset = ChangesetId * string
 type RawChangesets = RawChangeset list
 
-type TargetProject = Csproj of string
+type TargetProject = TargetProject of string
 
 type AffectedProject = {
       Project: TargetProject
