@@ -6,17 +6,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="ResultBuilder.fs" />
-        <Compile Include="Version.fs" />
-        <Compile Include="Changeset.fs" />
-        <Compile Include="ChangesetParser.fs" />
         <Compile Include="Changelog.fs" />
-        <Compile Include="ProjectStructure.fs" />
-        <Compile Include="SlnParser.fs" />
-        <Compile Include="Publish.fs" />
+        <Compile Include="MsProjects.fs" />
+        <Compile Include="Projects.fs" />
         <Compile Include="UpdateCsproj.fs" />
-        <Compile Include="PublishCommand.fs" />
         <Compile Include="ApplicationError.fs" />
+        <Compile Include="PublishCommand.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
@@ -35,6 +30,10 @@
       <Reference Include="Markdig">
         <HintPath>..\..\..\.nuget\packages\markdig\0.37.0\lib\net8.0\Markdig.dll</HintPath>
       </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MonoVer.Domain\MonoVer.Domain.fsproj" />
     </ItemGroup>
 
 </Project>

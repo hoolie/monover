@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
+#
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MonoVer", "MonoVer\MonoVer.fsproj", "{64055749-27D3-47BB-AD88-4F88632C5DE1}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MonoVer.Test", "MonoVer.Test\MonoVer.Test.fsproj", "{AB4B5C4D-C34F-4775-8E44-51F5DD4BFEE0}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MonoVer.Domain", "MonoVer.Domain\MonoVer.Domain.fsproj", "{30C067EE-7E49-43B6-AF0B-A89E2DF8E1AF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,5 +21,9 @@ Global
 		{AB4B5C4D-C34F-4775-8E44-51F5DD4BFEE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AB4B5C4D-C34F-4775-8E44-51F5DD4BFEE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AB4B5C4D-C34F-4775-8E44-51F5DD4BFEE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30C067EE-7E49-43B6-AF0B-A89E2DF8E1AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30C067EE-7E49-43B6-AF0B-A89E2DF8E1AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30C067EE-7E49-43B6-AF0B-A89E2DF8E1AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30C067EE-7E49-43B6-AF0B-A89E2DF8E1AF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

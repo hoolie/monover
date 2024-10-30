@@ -13,7 +13,7 @@ let printError (error: ApplicationError) =
         match error with
         | MissingCommand _ -> (-1, "No command given. Please use a command as the first argument for the call.")
         | UnknownCommand s -> (-2, $"'{s}' was not recognized as a valid command")
-        | PublishDomainErrors e -> (-3, $"Failed to publish: {e}") 
+        | CommandError (code, description) -> (code, description) 
     Console.WriteLine(errorText)
     Console.WriteLine(helpText)
     errorCode
@@ -21,7 +21,7 @@ let printError (error: ApplicationError) =
 let runCommand( command: Parsed<obj>) =
     let result: Result<_,ApplicationError> =
         match command.Value with
-        | :? PublishOptions as opts -> (RunPublish opts|> Result.mapError ApplicationError.PublishDomainErrors)
+        | :? PublishOptions as opts -> (RunPublish opts)
         | _ -> Result.Error (UnknownCommand command.TypeInfo.Current.Name )
     match result with
         | Error e -> printError e
@@ -31,25 +31,6 @@ let runCommand( command: Parsed<obj>) =
 let main argv =
     let options = Parser.Default.ParseArguments<PublishOptions,Object> argv
     match options with
-        | :? CommandLine.Parsed<obj> as command -> runCommand command
+        | :? Parsed<obj> as command -> runCommand command
         | :? NotParsed<obj> as p -> printError (MissingCommand())
         | _ ->  -1
-// let markdown = """
-// ---
-// "projectA": patch
-// "projectB": patch
-// ---
-// # Added
-// bla
-// blub
-// # Fixed
-// blub
-// """
-// let result = MonoVer.ChangesetParser.Parse markdown
-//
-// match result with
-// | Ok changeset ->
-//     printfn $"Parsed successfully: %A{changeset}"
-// | Error errorMsg ->
-//     printfn $"Parsing failed: %s{errorMsg}"
-// printfn "hi"

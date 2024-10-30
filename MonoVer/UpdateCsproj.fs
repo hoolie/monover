@@ -1,21 +1,20 @@
 module MonoVer.UpdateCsproj
 
-open Microsoft.Build.Evaluation
-open MonoVer.Publish
-open MonoVer.SlnParser
-open MonoVer.Version
-
 open FSharpPlus
+open MonoVer.Domain.Types
+open MonoVer.Domain
+open MonoVer.MsProjects
 
-type UpdateVersionError = FailedToUpdateVersionInFile of PublishResult
+open Microsoft.Build.Evaluation
+type UpdateVersionError = FailedToUpdateVersionInFile of VersionIncreased
 let private setVersion  (version: Version) (project: Project)=
-   project.SetProperty("VersionPrefix", AsString version) |> ignore
+   project.SetProperty("VersionPrefix", Version.ToString version) |> ignore
    project
    
-let ApplyChanges (solution: MsSolution) (results: PublishResult) =
+let ApplyChanges (solution: MsSolution) (results: VersionIncreased ) =
     let changedProject =
-            solution.TryFind results.Project.Csproj.FullName
-            |>> setVersion results.NextVersion
+            solution.TryFind results.Project.FullName
+            |>> setVersion results.Version
     match changedProject with
     | Some proj -> Ok (proj.Save())
     | None -> Error (FailedToUpdateVersionInFile results)

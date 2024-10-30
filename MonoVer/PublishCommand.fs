@@ -4,20 +4,20 @@ open System
 open System.IO
 open CommandLine
 open FSharpPlus
-open FSharpPlus.Control
-open Microsoft.Build.Construction
 open Microsoft.FSharp.Core
-open MonoVer.Changeset
-open MonoVer.ProjectStructure
-open MonoVer.Publish
-open MonoVer.ChangelogEntry
+open MonoVer
+open MonoVer.Changelog
+open MonoVer.Cli
+open MonoVer.Domain
+open MonoVer.Domain.Types
 open MonoVer.UpdateCsproj
 
+
 type PublishDomainErrors =
-    | FailedToParseChangeset of string
     | SolutionFileNotFoundInWorkdir of string
     | MultipleSolutionFilesFoundInWorkdir of string seq
     | UpdateVersionError of UpdateVersionError
+    | PublishError of PublishError
 
 
 [<Verb("publish", HelpText = "applies all open changesets.")>]
@@ -26,17 +26,6 @@ type PublishOptions =
       Workdir: string
       [<Option(Default = ".changesets")>]
       Changesets: string }
-
-
-let ParseChangeset (fileInfo: FileInfo) : Result<Changeset, PublishDomainErrors> =
-    let content = File.ReadAllText fileInfo.FullName
-
-    match (ChangesetParser.Parse content) with
-    | Error e -> Error(FailedToParseChangeset e)
-    | Ok cs ->
-        Ok
-            { Id = (ChangesetId.Id fileInfo.Name)
-              Content = cs }
 
 
 let CHANGELOG_TEMPLATE =
@@ -54,47 +43,60 @@ let ReadChangelogFor (csproj: FileInfo) : Changelog =
         | None -> CHANGELOG_TEMPLATE
         | Some value -> File.ReadAllText value.FullName }
 
-let RunPublish (args: PublishOptions) : Result<unit, PublishDomainErrors> =
+let private loadRawChangesets =
+    DirectoryInfo 
+    >> _.EnumerateFiles("*.md")
+    >> Seq.map (fun file -> ((ChangesetId.Id file.FullName), File.ReadAllText file.FullName))
+    >> Seq.toList
+    
+let private loadSolution workdir =
+    match (DirectoryInfo(workdir).GetFiles("*.sln") |> Array.map _.FullName) with
+    | [||] -> Error(SolutionFileNotFoundInWorkdir workdir)
+    | [| x |] -> Ok(MsProjects.Load x)
+    | files -> Error(MultipleSolutionFilesFoundInWorkdir files)
+   
+let private updateVersion solution (newVersion: VersionIncreased) =
+     Console.WriteLine $"Increase version of '{newVersion.Project.FullName}' to '{Version.ToString newVersion.Version}'"
+     ApplyChanges solution newVersion
+     |> Result.mapError PublishDomainErrors.UpdateVersionError
+                                      
+let private processChangesets projects = Changesets.Publish projects >> (Result.mapError PublishDomainErrors.PublishError)
+let private updateChangelog ({Project = project; Changes = changes; Version = version}: NewChangelogEntry) =
+        let changelogEntry:ChangelogVersionEntry = { Version = version; Date = DateOnly.FromDateTime DateTime.Today; Changes = changes }
+        let oldChangelog = ReadChangelogFor project
+        let newChangelog = AddEntry oldChangelog changelogEntry
+        Console.WriteLine $"Write file '{newChangelog.Path.FullName}'"
+        File.WriteAllText(newChangelog.Path.FullName, newChangelog.Content)
+        Ok()
+   
+let private deleteChangeset (Id id) =
+    Console.WriteLine $"Delete file '{id}'"
+    Ok (File.Delete id)
+    
+let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
     let changesets = Path.Join(args.Workdir, args.Changesets)
-    // get all changesets
     monad {
-        let! changesets =
-            DirectoryInfo(changesets).EnumerateFiles("*.md")
-            |> Seq.map ParseChangeset
-            |> Seq.toList
-            |> Sequence.Sequence
-
+        // get all changesets
+        let rawChangesets = loadRawChangesets changesets
         // get all projects
-        let! projects =
-            match (DirectoryInfo(args.Workdir).GetFiles("*.sln") |> Array.map _.FullName) with
-            | [||] -> Error(SolutionFileNotFoundInWorkdir args.Workdir)
-            | [| x |] -> Ok(SlnParser.LoadProjects(SolutionFile.Parse(x)))
-            | files -> Error(MultipleSolutionFilesFoundInWorkdir files)
-
-        let parsedProjects = projects |> Map.values |> SlnParser.getProjects
+        let! solution = loadSolution args.Workdir
+        let projects = Projects.FromSolution solution
+                             
         // publish
-        let res = Publish parsedProjects changesets
-        // update version
-        let! _ = res
-                 |>> (ApplyChanges projects )
-                 |> sequence
-                 |>> ignore
-                 |> Result.mapError PublishDomainErrors.UpdateVersionError
-                 
-
-
-        // update/create Changelogs
-        let changelogs =
-            res
-            |> List.map (fun x ->
-                (ReadChangelogFor x.Project.Csproj,
-                 { Version = x.NextVersion
-                   Date = DateOnly.FromDateTime DateTime.Today
-                   Changes = x.Changes }))
-            |> List.map (fun (x, y) -> AddEntryToChangelog y x)
-
-        for changelog in changelogs do
-            File.WriteAllText(changelog.Path.FullName, changelog.Content)
-
-        return ()
+        let! publishResult = processChangesets projects rawChangesets
+        // execute changes
+        return! publishResult
+                        |> List.map (function
+                            | NewChangelogEntry newEntry -> updateChangelog newEntry
+                            | VersionIncreased projectVersion -> updateVersion solution projectVersion 
+                            | ChangesetApplied changesetId -> deleteChangeset changesetId )
+                        |> sequence
+                        |>> ignore
     }
+    |> Result.mapError (
+        function
+        | PublishError (FailedToParseChangeset (Id x,e)) -> CommandError (-4, $"""Failed to parse Changeset with name {x}.md:{e}""" )
+        | SolutionFileNotFoundInWorkdir x -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
+        | MultipleSolutionFilesFoundInWorkdir x -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
+        | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project.FullName} to version {Version.ToString e.Version} ")
+        )

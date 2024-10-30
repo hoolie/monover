@@ -1,27 +1,17 @@
-module MonoVer.Version
+module MonoVer.Domain.Version
 
 open System
 open System.Text.RegularExpressions
-open MonoVer.ResultBuilder
+open MonoVer.Domain.Types
 
-type VersionParsingError = InvalidVersionFormat of string
-
-type Version =
-    { Major: uint
-      Minor: uint
-      Patch: uint }
-
-let AsString version =
-    $"{version.Major}.{version.Minor}.{version.Patch}"
-
-let Create major minor patch =
+open FSharpPlus
+let private Create major minor patch =
     { Major = major
       Minor = minor
       Patch = patch }
+let private versionRegexPattern = @"\s*(\d+)\.(\d+)\.(\d+)(?:\.\d+)?(?:-[^<\s]+)?\s*"
 
-let versionRegexPattern = @"\s*(\d+)\.(\d+)\.(\d+)(?:\.\d+)?(?:-[^<\s]+)?\s*"
-
-let private MatchVersion (content: string) : Result<GroupCollection, VersionParsingError> =
+let private MatchVersion (content: string) : Result<GroupCollection, InvalidVersionFormat> =
     let RegexMatch = Regex.Match(content, versionRegexPattern)
 
     if RegexMatch.Success then
@@ -29,8 +19,8 @@ let private MatchVersion (content: string) : Result<GroupCollection, VersionPars
     else
         Result.Error(InvalidVersionFormat content)
 
-let TryFromString (raw: string) : Result<Version, VersionParsingError> =
-    result {
+let TryFromString (raw: string) : Result<Version, InvalidVersionFormat> =
+    monad {
         let! groups = MatchVersion raw
         let major = UInt32.Parse(groups[1].Value)
         let minor = UInt32.Parse(groups[2].Value)
@@ -46,3 +36,7 @@ let FromString (raw: string) : Version =
     match (TryFromString raw) with
     | Ok t -> t
     | Error e -> raise (ErrorToException e)
+    
+    
+let ToString version =
+    $"{version.Major}.{version.Minor}.{version.Patch}"

@@ -1,12 +1,14 @@
 module MonoVer.Test.ChangelogTests
 
 open System
+open System.IO
 open MonoVer
-open MonoVer.ChangelogEntry
+open MonoVer.Domain
+open MonoVer.Domain.Types
 open Xunit
 open FsUnit
-open MonoVer.Changeset
 
+let CreateChangelog content = {Content = content; Path = FileInfo "none"}
 type ChangelogTests() =
 
     [<Fact>]
@@ -19,9 +21,9 @@ type ChangelogTests() =
         let entry:ChangelogVersionEntry = {
             Version = Version.FromString("1.0.0")
             Date = DateOnly.Parse("2024-10-15")
-            Changes = [Added ["- First release"]] |> mergeDescriptions
+            Changes = [Added ["- First release"]] |> Descriptions.merge 
         }
-        let result = AddEntryToChangelog entry {Content = markdown}
+        let result = Changelog.AddEntry (CreateChangelog markdown) entry
         result.Content |> should contain "## [1.0.0] - 2024-10-15"
         result.Content |> should contain "### Added\n- First release"
 
@@ -35,9 +37,9 @@ type ChangelogTests() =
         let entry:ChangelogVersionEntry = {
             Version = Version.FromString("1.1.0")
             Date = DateOnly.Parse("2024-10-15")
-            Changes = [Changed ["- Updated feature"]] |> mergeDescriptions
+            Changes = [Changed ["- Updated feature"]] |> Descriptions.merge
         }
-        let result = AddEntryToChangelog entry {Content = markdown}
+        let result = Changelog.AddEntry (CreateChangelog markdown) entry
         result.Content |> should contain "## [1.1.0] - 2024-10-15"
         result.Content |> should contain "### Changed\n- Updated feature"
         result.Content |> should startWith "## [1.1.0] - 2024-10-15"
@@ -56,9 +58,9 @@ type ChangelogTests() =
                 Added ["- New feature"]
                 Fixed ["- Bug fix"]
                 Deprecated ["- Deprecated API"]
-            ] |> mergeDescriptions
+            ] |> Descriptions.merge
         }
-        let result = AddEntryToChangelog entry {Content = markdown}
+        let result = Changelog.AddEntry (CreateChangelog markdown) entry 
         result.Content |> should contain "## [1.1.0] - 2024-10-15"
         result.Content |> should contain "### Added\n- New feature"
         result.Content |> should contain "### Fixed\n- Bug fix"
@@ -102,9 +104,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         let entry:ChangelogVersionEntry = {
             Version = Version.FromString("1.1.1")
             Date = DateOnly.Parse("2024-10-15")
-            Changes = [Fixed ["- Some Important Feature"]] |> mergeDescriptions
+            Changes = [Fixed ["- Some Important Feature"]] |> Descriptions.merge
             
         } 
-        let result = AddEntryToChangelog  entry {Content=markdown}
+        let result = Changelog.AddEntry (CreateChangelog markdown) entry 
         result.Content |> should contain "## [1.1.1] - 2024-10-15"
         

@@ -2,8 +2,8 @@ module MonoVer.Test.ChangesetParserTests
 
 open Xunit
 open FsUnit
-open MonoVer.ChangesetParser
-open MonoVer.Changeset
+open MonoVer.Domain.Types
+open MonoVer.Domain
 
 type ChangesetParserTests() =
 
@@ -26,7 +26,7 @@ Added some new features
 Fixed some bugs
 """
         let expected = createExpectedChangeset()
-        match Parse markdown with
+        match Changeset.Parse markdown with
         | Ok changeset -> Assert.Equal(expected, changeset)
         | Error errorMsg -> Assert.True(false, $"Expected Ok but got Error: {errorMsg}")
 
@@ -41,7 +41,7 @@ Fixed some bugs
         # Fixed
         Fixed some bugs
         """
-        match Parse invalidMarkdown with
+        match Changeset.Parse invalidMarkdown with
         | Ok _ -> Assert.True(false, "Expected Error but got Ok")
         | Error _ -> Assert.True(true)
 
@@ -52,7 +52,7 @@ Fixed some bugs
         # Fixed
         Fixed some bugs
         """
-        match Parse markdownWithoutProjects with
+        match Changeset.Parse markdownWithoutProjects with
         | Ok _ -> Assert.True(false, "Expected Error but got Ok")
         | Error _ -> Assert.True(true)
 
@@ -63,7 +63,7 @@ Fixed some bugs
         "ProjectB": minor
         ---
         """
-        match Parse markdownWithoutDescriptions with
+        match Changeset.Parse markdownWithoutDescriptions with
         | Ok _ -> Assert.True(false, "Expected Error but got Ok")
         | Error _ -> Assert.True(true)
 
@@ -87,6 +87,6 @@ Changed some functionality
               Descriptions = [ Added [ "Added some new features" ]
                                Fixed [ "Fixed some bugs" ]
                                Changed [ "Changed some functionality" ] ] }
-        match Parse markdown with
+        match Changeset.Parse markdown with
         | Ok changeset -> changeset.AffectedProjects |> should equal expected.AffectedProjects
         | Error errorMsg -> Assert.True(false, $"Expected Ok but got Error: {errorMsg}")
