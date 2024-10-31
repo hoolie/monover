@@ -3,7 +3,7 @@
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <RootNamespace>MonoVer.Domain.Publish</RootNamespace>
+        <RootNamespace>MonoVer.Domain</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,6 +12,7 @@
         <Compile Include="Descriptions.fs" />
         <Compile Include="Version.fs" />
         <Compile Include="Changeset.fs" />
+        <Compile Include="Changesets.fs" />
     </ItemGroup>
 
     <ItemGroup>

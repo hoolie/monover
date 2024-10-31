@@ -43,6 +43,7 @@ type ChangesetId = Id of string
 
 type RawChangeset = ChangesetId * string
 type RawChangesets = RawChangeset list
+type InvalidVersionFormat = InvalidVersionFormat of string
 
 type TargetProject = TargetProject of string
 
@@ -51,7 +52,6 @@ type AffectedProject = {
       Impact: SemVerImpact
 }
 
-type InvalidVersionFormat = InvalidVersionFormat of string
 
 type ChangesetContent = {
       AffectedProjects: AffectedProject list
