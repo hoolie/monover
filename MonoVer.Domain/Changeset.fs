@@ -35,8 +35,16 @@ let private pAffectedProjectsSection =
 
 // Parser for description lines (e.g., "Added some new features")
 let private pLine = many1Satisfy (fun c -> c <> '\n') .>> newline
+let private pHeaderTitle = choice [
+    pstring "Added"
+    pstring "Changed"
+    pstring "Deprecated"
+    pstring "Removed"
+    pstring "Fixed"
+    pstring "Security"
+]
 // Parser for description header (e.g., "# Added")
-let private pHeader = pchar '#' >>. spaces >>. pLine
+let private pHeader = pchar '#' >>. spaces >>. pHeaderTitle .>> newline
 
 // Parser for a section of descriptions (e.g., "# Added\nDescription")
 let private pDescriptionSection =
@@ -48,7 +56,8 @@ let private pDescriptionSection =
         | "Removed" -> Removed(lines)
         | "Fixed" -> Fixed(lines)
         | "Security" -> Security(lines)
-        | _ -> failwith "Unknown description header")
+        | _ -> failwith $"Unknown description header: '{header}'"
+        )
 
 // Parser for all sections of descriptions
 let private pDescriptions = many1 pDescriptionSection
@@ -72,17 +81,8 @@ let ParseRaw ((id, content): RawChangeset) : Result<Changeset, PublishError> =
     |> Result.mapError (fun e -> FailedToParseChangeset(id, e))
     |> Result.map (fun parsed -> { Id = id; Content = parsed })
    
-   
-   
-let impactToString impact =
-    match impact with
-    | SemVerImpact.Major -> "major"
-    | SemVerImpact.Minor -> "minor"
-    | SemVerImpact.Patch -> "patch"
-    | _ -> "unknown"
-
 let serializeAffectedProject ({Project = (TargetProject project); Impact = impact}:AffectedProject) (sb:StringBuilder) =
-    sb.AppendLine($"\"{project}\": {impactToString impact}")
+    sb.AppendLine($"\"{project}\": {SemVerImpact.Serialize impact}")
 // Serialize an AffectedProject list to the specified format
 let serializeAffectedProjects  (projects: AffectedProject list)(sb:StringBuilder) =
     sb.AppendLine("---")

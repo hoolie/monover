@@ -14,8 +14,7 @@ open MonoVer.UpdateCsproj
 
 
 type PublishDomainErrors =
-    | SolutionFileNotFoundInWorkdir of string
-    | MultipleSolutionFilesFoundInWorkdir of string seq
+    | MsProjectsError of MsProjectsError
     | UpdateVersionError of UpdateVersionError
     | PublishError of PublishError
 
@@ -52,10 +51,8 @@ let private loadRawChangesets =
     >> Seq.toList
     
 let private loadSolution workdir =
-    match (DirectoryInfo(workdir).GetFiles("*.sln") |> Array.map _.FullName) with
-    | [||] -> Error(SolutionFileNotFoundInWorkdir workdir)
-    | [| x |] -> Ok(MsProjects.Load x)
-    | files -> Error(MultipleSolutionFilesFoundInWorkdir files)
+    MsProjects.TryLoadFrom workdir
+    |> Result.mapError MsProjectsError
    
 let private updateVersion solution (newVersion: VersionIncreased) =
      Console.WriteLine $"Increase version of '{newVersion.Project}' to '{Version.ToString newVersion.Version}'"
@@ -73,8 +70,9 @@ let private updateChangelog ({Project = project; Changes = changes; Version = ve
    
 let private deleteChangeset (Id id) =
     Console.WriteLine $"Delete file '{id}'"
-    Ok (File.Delete id)
-    
+    Ok (
+        //File.Delete id
+        )
 let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
     let changesets = Path.Join(args.Workdir, args.Changesets)
     monad {
@@ -98,7 +96,7 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
     |> Result.mapError (
         function
         | PublishError (FailedToParseChangeset (Id x,e)) -> CommandError (-4, $"""Failed to parse Changeset with name {x}.md:{e}""" )
-        | SolutionFileNotFoundInWorkdir x -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
-        | MultipleSolutionFilesFoundInWorkdir x -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
+        | MsProjectsError (SolutionFileNotFoundInWorkdir x) -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
+        | MsProjectsError (MultipleSolutionFilesFoundInWorkdir x) -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
         | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project} to version {Version.ToString e.Version} ")
         )

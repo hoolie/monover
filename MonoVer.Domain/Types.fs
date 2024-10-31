@@ -28,9 +28,9 @@ type Descriptions = {
 
     
 type SemVerImpact =
-    | Major = 0
-    | Minor = 1
-    | Patch = 2
+    | Major
+    | Minor
+    | Patch
 
 type Description =
     | Added of string list

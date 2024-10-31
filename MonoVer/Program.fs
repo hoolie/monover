@@ -3,6 +3,7 @@
 open System
 open CommandLine
 open Microsoft.Build.Locator
+open MonoVer
 open MonoVer.Cli
 open MonoVer.PublishCommand
 
@@ -22,6 +23,7 @@ let runCommand( command: Parsed<obj>) =
     let result: Result<_,ApplicationError> =
         match command.Value with
         | :? PublishOptions as opts -> (RunPublish opts)
+        | :? NewChangesetOption as opts -> CreateChangesetCommand.Run opts
         | _ -> Result.Error (UnknownCommand command.TypeInfo.Current.Name )
     match result with
         | Error e -> printError e
@@ -29,7 +31,7 @@ let runCommand( command: Parsed<obj>) =
     
 [<EntryPoint>]
 let main argv =
-    let options = Parser.Default.ParseArguments<PublishOptions,Object> argv
+    let options = Parser.Default.ParseArguments<PublishOptions,NewChangesetOption> argv
     match options with
         | :? Parsed<obj> as command -> runCommand command
         | :? NotParsed<obj> as p -> printError (MissingCommand())

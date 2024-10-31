@@ -12,6 +12,7 @@
         <Compile Include="UpdateCsproj.fs" />
         <Compile Include="ApplicationError.fs" />
         <Compile Include="PublishCommand.fs" />
+        <Compile Include="CreateChangesetCommand.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

@@ -33,7 +33,7 @@ let rec publishTransientUpdates (projects: Project list) (projectChange: Project
         let projectChange =
             { projectChange with
                 Project = project
-                Descriptions = [ Changed(List.singleton $"updated dependency {projectChange.Project.Csproj}") ]
+                Descriptions = [ Changed(List.singleton $"updated dependency {projectChange.Project.Csproj.Name}") ]
                 DependencyGraph = project :: projectChange.DependencyGraph }
 
         projectChange :: (publishTransientUpdates projects projectChange)
@@ -70,7 +70,6 @@ let private toChanges cumulatedChanges : PublishEvent list =
         | SemVerImpact.Patch ->
             { project.CurrentVersion with
                 Patch = project.CurrentVersion.Patch + 1u }
-        | _ -> System.ArgumentOutOfRangeException() |> raise
 
 
     let descriptions =

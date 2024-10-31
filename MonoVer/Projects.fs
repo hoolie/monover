@@ -9,19 +9,20 @@ module Projects =
     open MonoVer.Domain.Types
     open MonoVer.Domain
 
-    type private SlnProject = FileInfo * Version
-    type private SlnProjectWithReferences = SlnProject * FileInfo seq
+    type private SlnProject = string * Version
+    type private SlnProjectWithReferences = SlnProject * string seq
 
 
     let private parseLoadedProject (p: MsProject): SlnProjectWithReferences =
             let version = Version.FromString(p.GetPropertyValue("Version"))
-            let slnProj = SlnProject((FileInfo p.FullPath), version)
+            let slnProj = SlnProject((p.FullPath), version)
             let projectReferences = p.GetItems("ProjectReference")
             let deps =
                 projectReferences
                 |> Seq.map (_.EvaluatedInclude)
                 |> Seq.map (fun rel -> Path.Join(p.DirectoryPath, rel))
                 |> Seq.map FileInfo
+                |> Seq.map _.FullName
 
             SlnProjectWithReferences(slnProj, deps)
 
@@ -31,7 +32,7 @@ module Projects =
         let projectMap =
             projectsWithRefs
             |> Seq.map fst // Extract the SlnProject
-            |> Seq.map (fun (fileInfo, version) -> (fileInfo.FullName, (fileInfo, version))) // Map file paths to SlnProjects
+            |> Seq.map (fun (fileInfo, version) -> (fileInfo, (fileInfo, version))) // Map file paths to SlnProjects
             |> Map.ofSeq
 
         // Step 2: Create an initial unresolved node map with empty dependencies
@@ -41,7 +42,7 @@ module Projects =
         let rec resolveProject (project: SlnProject) : Project =
             let csproj, version = project
 
-            match resolvedProjects.TryGetValue(csproj.FullName) with
+            match resolvedProjects.TryGetValue(csproj) with
             | true, proj -> proj // Return already resolved Project
             | _ ->
                 // Find the SlnProjectWithReferences associated with the project
@@ -52,27 +53,27 @@ module Projects =
                     // Recursively resolve dependencies
                     let resolvedDependencies =
                         references
-                        |> Seq.choose (fun refFileInfo -> Map.tryFind refFileInfo.FullName projectMap) // Map FileInfo to SlnProject
+                        |> Seq.choose (fun refFileInfo -> Map.tryFind refFileInfo projectMap) // Map FileInfo to SlnProject
                         |> Seq.map resolveProject // Recursively resolve dependencies
                         |> Seq.toList
 
                     // Create the Project node
                     let resolvedProject =
-                        { Csproj = csproj
+                        { Csproj = FileInfo csproj
                           CurrentVersion = version
                           Dependencies = resolvedDependencies }
 
                     // Memoize the resolved project
-                    resolvedProjects.Add(csproj.FullName, resolvedProject)
+                    resolvedProjects.Add(csproj, resolvedProject)
                     resolvedProject
                 | None ->
                     // Handle case where the project is not found, which shouldn't happen
                     let proj =
-                        { Csproj = csproj
+                        { Csproj = FileInfo csproj
                           CurrentVersion = version
                           Dependencies = [] }
 
-                    resolvedProjects.Add(csproj.FullName, proj)
+                    resolvedProjects.Add(csproj, proj)
                     proj
 
         // Step 3: Resolve all projects starting from each project in the input
