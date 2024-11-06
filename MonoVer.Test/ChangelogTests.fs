@@ -5,68 +5,82 @@ open System.IO
 open MonoVer
 open MonoVer.Domain
 open MonoVer.Domain.Types
-open Xunit
 open FsUnit
+open NUnit.Framework
 
 let CreateChangelog content = {Content = content; Path = FileInfo "none"}
 type ChangelogTests() =
 
-    [<Fact>]
+    [<Test>]
     member _.``should insert the first entry if no versions exist``() =
         let markdown = """All notable changes to this project will be documented in this file.
 
-    The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-    and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-    """
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+"""
         let entry:ChangelogVersionEntry = {
             Version = Version.FromString("1.0.0")
             Date = DateOnly.Parse("2024-10-15")
-            Changes = [Added ["- First release"]] |> Descriptions.merge 
+            Changes = { ChangeDescriptions.Empty with Major = [ChangeDescription "First release" ]}
         }
         let result = Changelog.AddEntry (CreateChangelog markdown) entry
-        result.Content |> should contain "## [1.0.0] - 2024-10-15"
-        result.Content |> should contain "### Added\n- First release"
+        result.Content |> should equal """All notable changes to this project will be documented in this file.
 
-    [<Fact>]
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2024-10-15
+### Major
+First release"""
+
+    [<Test>]
     member _.``should correctly append a new version entry above an existing one``() =
         let markdown = """## [1.0.0] - 2023-01-01
-
-    ### Added
-    - Initial release
-    """
+- Initial release
+"""
         let entry:ChangelogVersionEntry = {
             Version = Version.FromString("1.1.0")
             Date = DateOnly.Parse("2024-10-15")
-            Changes = [Changed ["- Updated feature"]] |> Descriptions.merge
+            Changes = { ChangeDescriptions.Empty with Minor = [ChangeDescription "Added Feature X\n" ]}
         }
         let result = Changelog.AddEntry (CreateChangelog markdown) entry
-        result.Content |> should contain "## [1.1.0] - 2024-10-15"
-        result.Content |> should contain "### Changed\n- Updated feature"
-        result.Content |> should startWith "## [1.1.0] - 2024-10-15"
+        result.Content |> should equal """## [1.1.0] - 2024-10-15
+### Minor
+Added Feature X
 
-    [<Fact>]
+## [1.0.0] - 2023-01-01
+- Initial release
+"""
+
+    [<Test>]
     member _.``should handle multiple change types correctly``() =
         let markdown = """## [1.0.0] - 2023-01-01
 
-    ### Added
-    - Initial release
-    """
+### Added
+- Initial release
+"""
         let entry:ChangelogVersionEntry = {
             Version = Version.FromString("1.1.0")
             Date = DateOnly.Parse("2024-10-15")
-            Changes = [
-                Added ["- New feature"]
-                Fixed ["- Bug fix"]
-                Deprecated ["- Deprecated API"]
-            ] |> Descriptions.merge
+            Changes = { ChangeDescriptions.Empty
+                        with
+                            Minor = [ChangeDescription "- New feature"]
+                            Patch = [ChangeDescription "- Deprecated API" ;ChangeDescription"- Bug fix"]
+                       }
         }
         let result = Changelog.AddEntry (CreateChangelog markdown) entry 
-        result.Content |> should contain "## [1.1.0] - 2024-10-15"
-        result.Content |> should contain "### Added\n- New feature"
-        result.Content |> should contain "### Fixed\n- Bug fix"
-        result.Content |> should contain "### Deprecated\n- Deprecated API"
+        result.Content |> should equal """## [1.1.0] - 2024-10-15
+### Minor
+- New feature
+### Patch
+- Deprecated API
+- Bug fix
+## [1.0.0] - 2023-01-01
 
-    [<Fact>]
+### Added
+- Initial release
+"""
+    [<Test>]
     member _.``should insert the entry in above the last entry``() =
         let markdown = """All notable changes to this project will be documented in this file.
 
@@ -104,7 +118,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         let entry:ChangelogVersionEntry = {
             Version = Version.FromString("1.1.1")
             Date = DateOnly.Parse("2024-10-15")
-            Changes = [Fixed ["- Some Important Feature"]] |> Descriptions.merge
+            Changes = {ChangeDescriptions.Empty
+                       with
+                        Patch = [ChangeDescription "- Fixed some Important Feature"]}
             
         } 
         let result = Changelog.AddEntry (CreateChangelog markdown) entry 

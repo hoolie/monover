@@ -5,7 +5,7 @@ open System.Text.RegularExpressions
 open MonoVer.Domain.Types
 
 open FSharpPlus
-let private Create major minor patch =
+let private Create major minor patch: Version =
     { Major = major
       Minor = minor
       Patch = patch }
@@ -38,5 +38,5 @@ let FromString (raw: string) : Version =
     | Error e -> raise (ErrorToException e)
     
     
-let ToString version =
+let ToString (version: Version) =
     $"{version.Major}.{version.Minor}.{version.Patch}"

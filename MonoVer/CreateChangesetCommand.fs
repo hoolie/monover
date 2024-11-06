@@ -57,7 +57,7 @@ module CreateChangesetCommand =
                         |>> (fun proj-> {Project= proj; Impact = impact})
             let changeset = Changeset.Serialize {
                 AffectedProjects = affectedProjects
-                Descriptions = [] 
+                Description =  ChangesetDescription.ChangesetDescription ""
             }
             File.WriteAllText (Path.Join(workdir, ".changesets", changesetName + ".md"), changeset)
             return ()

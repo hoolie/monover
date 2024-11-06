@@ -1,14 +1,23 @@
 namespace MonoVer.Domain.Types
 
-type NewChangelogEntry = { Project: Csproj; Changes: Descriptions; Version: Version  }
-type VersionIncreased = { Project: Csproj; Version: Version  }
+type ChangeDescriptions =
+    { Major: ChangeDescription list
+      Minor: ChangeDescription list
+      Patch: ChangeDescription list }
 
-type PublishError =  FailedToParseChangeset of (ChangesetId * string)
-   
+type NewChangelogEntry =
+    { Project: Csproj
+      Changes: ChangeDescriptions
+      Version: Version }
+
+type VersionIncreased = { Project: Csproj; Version: Version }
+
+type PublishError = FailedToParseChangeset of (ChangesetId * string)
+
 type PublishEvent =
     | NewChangelogEntry of NewChangelogEntry
     | VersionIncreased of VersionIncreased
     | ChangesetApplied of ChangesetId
-    
+
 type MergedChangesets = Result<PublishEvent list, PublishError>
-type ProcessChangesets =  RawChangesets -> MergedChangesets
+type ProcessChangesets = RawChangesets -> MergedChangesets

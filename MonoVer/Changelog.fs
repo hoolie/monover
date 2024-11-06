@@ -2,6 +2,7 @@ namespace MonoVer
 
 open System.IO
 open System
+open FSharpPlus
 open MonoVer.Domain.Types
 type Changelog  = {
     Path: FileInfo
@@ -11,24 +12,21 @@ type Changelog  = {
 type ChangelogVersionEntry =
         { Version: Version
           Date: DateOnly
-          Changes: Descriptions }
+          Changes: ChangeDescriptions }
 module Changelog = 
 
     open System.Text.RegularExpressions
     open MonoVer.Domain
 
     let VersionSectionHeaderRegex = Regex("^##\s*\[\d*\.\d*\.\d*\]\s*-\s*\d*-\d*-\d*\s*$")
-    let formatChanges (changes:Descriptions) =
+    let formatChanges (changes:ChangeDescriptions) =
         [
-         ("Added", changes.Added);
-         ("Changed", changes.Changed);
-         ("Deprecated", changes.Deprecated);
-         ("Fixed", changes.Fixed);
-         ("Removed", changes.Removed);
-         ("Security", changes.Security)
+         ("Major", changes.Major);
+         ("Minor", changes.Minor);
+         ("Patch", changes.Patch);
          ]
         |> List.filter(fun (_,e) -> not (Seq.isEmpty e))
-        |> List.collect (fun (section, content) -> $"### {section}" :: content )
+        |> List.collect (fun (section, content) -> $"### {section}" :: (content|>> fun(ChangeDescription desc) -> desc ))
     let format (entry:ChangelogVersionEntry) =
          $"## [{Version.ToString entry.Version}] - {entry.Date:``yyyy-MM-dd``}"
             :: (formatChanges entry.Changes)

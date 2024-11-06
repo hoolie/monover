@@ -1,9 +1,9 @@
 module MonoVer.Test.ChangesetParserTests
 
-open Xunit
 open FsUnit
 open MonoVer.Domain.Types
 open MonoVer.Domain
+open NUnit.Framework
 
 type ChangesetParserTests() =
 
@@ -11,26 +11,27 @@ type ChangesetParserTests() =
         {
           AffectedProjects = [ { Project = TargetProject "ProjectA"; Impact = SemVerImpact.Major }
                                { Project = TargetProject "ProjectB"; Impact = SemVerImpact.Minor } ]
-          Descriptions = [ Added [ "Added some new features" ]
-                           Fixed [ "Fixed some bugs" ] ] }
+          Description = ChangesetDescription
+"""Added some new features
+Fixed some bugs
+"""
+                             }
 
-    [<Fact>]
+    [<Test>]
     member _.``Parse method should return Ok with valid changeset when input is correct``() =
         let markdown = """---
 "ProjectA": major
 "ProjectB": minor
 ---
-# Added
 Added some new features
-# Fixed
 Fixed some bugs
 """
         let expected = createExpectedChangeset()
         match Changeset.Parse markdown with
-        | Ok changeset -> Assert.Equal(expected, changeset)
-        | Error errorMsg -> Assert.True(false, $"Expected Ok but got Error: {errorMsg}")
+        | Ok changeset -> changeset |> should equal expected
+        | Error errorMsg -> failwith $"Expected Ok but got Error: {errorMsg}"
 
-    [<Fact>]
+    [<Test>]
     member _.``Parse method should return Error when input is incorrect``() =
         let invalidMarkdown = """---
         "ProjectA": major
@@ -42,10 +43,10 @@ Fixed some bugs
         Fixed some bugs
         """
         match Changeset.Parse invalidMarkdown with
-        | Ok _ -> Assert.True(false, "Expected Error but got Ok")
-        | Error _ -> Assert.True(true)
+        | Ok _ -> failwith "Expected Error but got Ok"
+        | Error _ -> ()
 
-    [<Fact>]
+    [<Test>]
     member _.``Parse method should return Error when affected projects section is missing``() =
         let markdownWithoutProjects = """# Added
         Added some new features
@@ -53,21 +54,21 @@ Fixed some bugs
         Fixed some bugs
         """
         match Changeset.Parse markdownWithoutProjects with
-        | Ok _ -> Assert.True(false, "Expected Error but got Ok")
-        | Error _ -> Assert.True(true)
-
-    [<Fact>]
-    member _.``Parse method should return Error when descriptions section is missing``() =
+        | Ok _ -> failwith "Expected Error but got Ok"
+        | Error _ -> ()
+        
+    [<Test>]
+    member _.``Parse method should return Ok when descriptions section is missing``() =
         let markdownWithoutDescriptions = """---
         "ProjectA": major
         "ProjectB": minor
         ---
         """
         match Changeset.Parse markdownWithoutDescriptions with
-        | Ok _ -> Assert.True(false, "Expected Error but got Ok")
-        | Error _ -> Assert.True(true)
+        | Error _ -> failwith "Expected Ok but got Error"
+        | Ok _ -> ()
 
-    [<Fact>]
+    [<Test>]
     member _.``Parse method should return Ok with valid changeset when input contains more sections``() =
         let markdown = """---
 "ProjectA": major
@@ -84,9 +85,11 @@ Changed some functionality
             {
               AffectedProjects = [ { Project = TargetProject "ProjectA"; Impact = SemVerImpact.Major }
                                    { Project = TargetProject "ProjectB"; Impact = SemVerImpact.Minor } ]
-              Descriptions = [ Added [ "Added some new features" ]
-                               Fixed [ "Fixed some bugs" ]
-                               Changed [ "Changed some functionality" ] ] }
+              Description = ChangesetDescription
+"""Added some new features
+Fixed some bugs
+Changed some functionality"""
+            }
         match Changeset.Parse markdown with
         | Ok changeset -> changeset.AffectedProjects |> should equal expected.AffectedProjects
-        | Error errorMsg -> Assert.True(false, $"Expected Ok but got Error: {errorMsg}")
+        | Error errorMsg -> failwith $"Expected Ok but got Error: {errorMsg}"

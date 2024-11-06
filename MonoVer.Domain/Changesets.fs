@@ -17,11 +17,15 @@ let private projectChangeFromAffectedProject
     (affectedProject: AffectedProject)
     =
     let project = findProjectByCsproj projects affectedProject.Project
+    let description =
+        match changeset.Content.Description with
+        | ChangesetDescription desc -> Some (ChangeDescription desc)
+        | Empty -> None
 
     { ChangesetId = changeset.Id
       Project = project
       Impact = affectedProject.Impact
-      Descriptions = changeset.Content.Descriptions
+      Description = description
       DependencyGraph = [ project ] }
 
 let private splitChangeset (projects: Project list) (changeset: Changeset) : ProjectChange list =
@@ -32,8 +36,9 @@ let rec publishTransientUpdates (projects: Project list) (projectChange: Project
     let updateProject project =
         let projectChange =
             { projectChange with
+                Impact = Patch
                 Project = project
-                Descriptions = [ Changed(List.singleton $"updated dependency {projectChange.Project.Csproj.Name}") ]
+                Description = Some (ChangeDescription $"updated dependency {projectChange.Project.Csproj.Name}")
                 DependencyGraph = project :: projectChange.DependencyGraph }
 
         projectChange :: (publishTransientUpdates projects projectChange)
@@ -47,6 +52,7 @@ let rec publishTransientUpdates (projects: Project list) (projectChange: Project
 
 let private closestChange ((_: ChangesetId, changes: ProjectChange list)) =
     changes |> List.sortBy (_.DependencyGraph.Length) |> List.head
+
 
 let private toChanges cumulatedChanges : PublishEvent list =
     let (project: Project, changes: ProjectChange list) = cumulatedChanges
@@ -72,12 +78,9 @@ let private toChanges cumulatedChanges : PublishEvent list =
                 Patch = project.CurrentVersion.Patch + 1u }
 
 
-    let descriptions =
-        Descriptions.merge (filteredChanges |> List.collect _.Descriptions)
-
     [ NewChangelogEntry
           { Project = Csproj project.Csproj.FullName
-            Changes = descriptions
+            Changes = ChangeDescriptions.Create filteredChanges
             Version = nextVersion }
       VersionIncreased
           { Project = Csproj project.Csproj.FullName

@@ -15,30 +15,12 @@ type Project = {
 }
 
 type Projects = Project list
-
-    
-type Descriptions = {
-    Added: string list
-    Changed: string list
-    Deprecated: string list
-    Removed: string list
-    Fixed: string list
-    Security: string list
-}
-
     
 type SemVerImpact =
     | Major
     | Minor
     | Patch
 
-type Description =
-    | Added of string list
-    | Changed of string list
-    | Deprecated of string list
-    | Removed of string list
-    | Fixed of string list
-    | Security of string list
 type ChangesetId = Id of string
 
 type RawChangeset = ChangesetId * string
@@ -52,20 +34,25 @@ type AffectedProject = {
       Impact: SemVerImpact
 }
 
-
+type ChangesetDescription =
+                           | ChangesetDescription of string
+                           | Empty
 type ChangesetContent = {
       AffectedProjects: AffectedProject list
-      Descriptions: Description list
+      Description: ChangesetDescription
 }
 type Changeset = {
     Id: ChangesetId
     Content: ChangesetContent
 }
+
+type ChangeDescription  = ChangeDescription of string
+
 type ProjectChange =
     { ChangesetId: ChangesetId
       Project: Project
       Impact: SemVerImpact
-      Descriptions: Description list
+      Description: ChangeDescription option
       DependencyGraph: Project list }
 
     

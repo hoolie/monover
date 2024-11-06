@@ -1,10 +1,11 @@
+[<NUnit.Framework.TestFixture>]
 module MonoVer.Test.PublishTests
 
 open System.IO
 open MonoVer.Domain.Types
 open MonoVer.Domain
-open Xunit
 open FsUnit
+open NUnit.Framework
 
 // Mock data
 let mockFileInfo path = FileInfo(path)
@@ -29,13 +30,7 @@ let mockVersion major minor patch : Version =
       Minor = minor
       Patch = patch }
 
-let mockDescriptions added changed deprecated removed fix security : Descriptions =
-    { Added = added
-      Changed = changed
-      Deprecated = deprecated
-      Removed = removed
-      Fixed = fix
-      Security = security }
+
 
 let mockChangeset id content : RawChangeset = ((Id id), content)
 
@@ -44,16 +39,37 @@ let mockAffectedProject project impact = { Project = project; Impact = impact }
 
 let mockTargetProject name = Csproj name
 
-let mockDescription added changed deprecated removed fix security =
-    [ Added added
-      Changed changed
-      Deprecated deprecated
-      Removed removed
-      Fixed fix
-      Security security ]
 
+
+let NewChangelogEntry (project:Project)(version:string) =
+    NewChangelogEntry {
+        Version = Version.FromString version
+        Project = Csproj project.Csproj.FullName
+        Changes = ChangeDescriptions.Empty
+    }
+let Major desc (event: PublishEvent) =
+    match event with
+    | NewChangelogEntry evt -> PublishEvent.NewChangelogEntry { evt with Changes.Major = evt.Changes.Minor @ [(ChangeDescription desc)]}
+    | _ -> failwith $"Setup failed: expected a NewChangelogEntry but got {event}"
+let Minor desc (event: PublishEvent):PublishEvent =
+    match event with
+    | NewChangelogEntry evt -> PublishEvent.NewChangelogEntry { evt with Changes.Minor = evt.Changes.Minor @ [(ChangeDescription desc)]}
+    | _ -> failwith $"Setup failed: expected a NewChangelogEntry but got {event}"
+
+let Patch desc (event: PublishEvent):PublishEvent =
+    match event with
+    | NewChangelogEntry evt -> PublishEvent.NewChangelogEntry { evt with Changes.Patch = evt.Changes.Patch @ [(ChangeDescription desc)]}
+    | _ -> failwith $"Setup failed: expected a NewChangelogEntry but got {event}"
+
+
+let VersionIncreased (project:Project) (version:string) =
+    VersionIncreased
+      { Project = Csproj project.Csproj.FullName
+        Version = Version.FromString version }
+let ChangesetApplied ((id,_): RawChangeset) =
+    ChangesetApplied id
 // Unit tests
-[<Fact>]
+[<Test>]
 let ``No changesets results in no publish results`` () =
     let projects = [ mockProject "TestProject" (mockVersion 1u 0u 0u) [] ]
     let changesets = []
@@ -61,7 +77,7 @@ let ``No changesets results in no publish results`` () =
     let value = shouldBeOk result
     value |> should be Empty
 
-[<Fact>]
+[<Test>]
 let ``Single changeset results in publish result`` () =
     let project = mockProject "TestProject" (mockVersion 1u 0u 0u) []
 
@@ -71,9 +87,7 @@ let ``Single changeset results in publish result`` () =
             """---
 "TestProject": minor
 ---
-# Added
-New feature
-"""
+New feature"""
 
     let projects = [ project ]
     let changesets = [ changeset ]
@@ -82,19 +96,16 @@ New feature
 
     value
     |> should
-        equal
-        [ NewChangelogEntry
-              { Project = Csproj project.Csproj.FullName
-                Version = Version.FromString("1.1.0")
-                Changes = [ Added [ "New feature" ] ] |> Descriptions.merge }
-          VersionIncreased
-              { Project = Csproj project.Csproj.FullName
-                Version = Version.FromString("1.1.0") }
-          ChangesetApplied(Id "1") ]
+        equivalent
+        [
+          NewChangelogEntry project "1.1.0" |> Minor "New feature";
+          VersionIncreased project "1.1.0";
+          ChangesetApplied changeset
+        ]
 
 
 
-[<Fact>]
+[<Test>]
 let ``Multiple changesets are applied correctly`` () =
     let project = mockProject "TestProject" (mockVersion 1u 0u 0u) []
 
@@ -104,9 +115,7 @@ let ``Multiple changesets are applied correctly`` () =
             """---
 "TestProject": minor
 ---
-# Added
-New feature
-"""
+New feature"""
 
     let changeset2 =
         mockChangeset
@@ -114,9 +123,7 @@ New feature
             """---
 "TestProject": minor
 ---
-# Fixed
-Bug fix
-"""
+Bug fix"""
 
     let projects = [ project ]
     let changesets = [ changeset1; changeset2 ]
@@ -125,18 +132,14 @@ Bug fix
 
     events
     |> should
-        equal
-        [ NewChangelogEntry
-              { Project = Csproj project.Csproj.FullName
-                Version = Version.FromString("1.1.0")
-                Changes = [ Added [ "New feature" ]; Fixed [ "Bug fix" ] ] |> Descriptions.merge }
-          VersionIncreased
-              { Project = Csproj project.Csproj.FullName
-                Version = Version.FromString("1.1.0") }
-          ChangesetApplied(Id "1")
-          ChangesetApplied(Id "2") ]
+        equivalent
+        [ NewChangelogEntry project "1.1.0" |> Minor "New feature"|> Minor "Bug fix"
+          VersionIncreased project "1.1.0"
+          ChangesetApplied changeset1
+          ChangesetApplied changeset2
+        ]
 
-[<Fact>]
+[<Test>]
 let ``Changeset with no affected projects does not affect publish result`` () =
     let project = mockProject "TestProject" (mockVersion 1u 0u 0u) []
 
@@ -153,11 +156,13 @@ New feature
     let changesets = [ changeset ]
     let result = Changesets.Publish projects changesets
     let value = shouldBeOk result
-    value |> should equal [ ChangesetApplied(Id "1") ]
+    value |> should equivalent [
+        ChangesetApplied changeset
+    ]
 
 
 
-[<Fact>]
+[<Test>]
 let ``Transitive dependencies are correctly updated`` () =
     let projectA = mockProject "ProjectA" (mockVersion 1u 0u 0u) []
     let projectB = mockProject "ProjectB" (mockVersion 1u 0u 0u) [ projectA ]
@@ -170,37 +175,23 @@ let ``Transitive dependencies are correctly updated`` () =
             """---
 "ProjectA": minor
 ---
-# Added
-Feature in ProjectA
-"""
+Feature in ProjectA"""
 
     let changesets = [ changeset ]
     let result = Changesets.Publish projects changesets
     let events = shouldBeOk result
+    events  |> should equivalent [
+        
+         NewChangelogEntry projectA "1.1.0"|> Minor "Feature in ProjectA";
+         NewChangelogEntry projectB "1.0.1"|> Patch "updated dependency ProjectA";
+         NewChangelogEntry projectC "1.0.1"|> Patch "updated dependency ProjectB";
+         VersionIncreased projectB "1.0.1"
+         VersionIncreased projectC "1.0.1"
+         VersionIncreased projectA "1.1.0"
+         ChangesetApplied changeset
+    ]
 
-    events
-    |> should
-        contain
-        (NewChangelogEntry
-            { Project = Csproj projectA.Csproj.FullName
-              Version = Version.FromString("1.1.0")
-              Changes = [ Added [ "Feature in ProjectA" ] ] |> Descriptions.merge })
-
-    events
-    |> should
-        contain
-        (VersionIncreased
-            { Project = Csproj projectB.Csproj.FullName
-              Version = Version.FromString("1.1.0") })
-
-    events
-    |> should
-        contain
-        (VersionIncreased
-            { Project = Csproj projectC.Csproj.FullName
-              Version = Version.FromString("1.1.0") })
-
-[<Fact>]
+[<Test>]
 let ``Transient dependency is overwritten when project is defined in changeset`` () =
     let projectA = mockProject "ProjectA" (mockVersion 1u 0u 0u) []
     let projectB = mockProject "ProjectB" (mockVersion 1u 0u 0u) [ projectA ]
@@ -214,11 +205,8 @@ let ``Transient dependency is overwritten when project is defined in changeset``
 "ProjectA": minor
 "ProjectB": patch
 ---
-# Added
 Feature in ProjectA
-# Fixed
-Fix in ProjectB
-"""
+Fix in ProjectB"""
 
     let changesets = [ changeset ]
     let result = Changesets.Publish projects changesets
@@ -226,39 +214,22 @@ Fix in ProjectB
 
     events
     |> should
-        contain
-        (NewChangelogEntry
-            { Project = Csproj projectA.Csproj.FullName
-              Version = Version.FromString("1.1.0")
-              Changes =
-                [ Added [ "Feature in ProjectA" ]; Fixed [ "Fix in ProjectB" ] ]
-                |> Descriptions.merge })
+        equivalent [
+        (NewChangelogEntry projectA "1.1.0" |> Minor
+"""Feature in ProjectA
+Fix in ProjectB"""
+            )
+        VersionIncreased projectA "1.1.0"
+        
+        (NewChangelogEntry projectB "1.0.1" |> Patch
+"""Feature in ProjectA
+Fix in ProjectB""")
+        VersionIncreased projectB "1.0.1"
+        ChangesetApplied changeset
+        ]
 
-    events
-    |> should
-        contain
-        (VersionIncreased
-            { Project = Csproj projectA.Csproj.FullName
-              Version = Version.FromString("1.1.0") })
-
-    events
-    |> should
-        contain
-        (NewChangelogEntry
-            { Project = Csproj projectB.Csproj.FullName
-              Version = Version.FromString("1.0.1")
-              Changes =
-                [ Added [ "Feature in ProjectA" ]; Fixed [ "Fix in ProjectB" ] ]
-                |> Descriptions.merge })
-
-    events
-    |> should
-        contain
-        (VersionIncreased
-            { Project = Csproj projectB.Csproj.FullName
-              Version = Version.FromString("1.0.1") })
-
-[<Fact(Skip = "not yet implemented")>]
+[<Test>]
+[<Ignore("not yet implemented")>]
 let ``Changeset with invalid projects should yield an error`` () =
     let project = mockProject "TestProject" (mockVersion 1u 0u 0u) []
 
@@ -275,5 +246,5 @@ let ``Changeset with invalid projects should yield an error`` () =
     let projects = [ project ]
     let changesets = [ changeset ]
     let result = Changesets.Publish projects changesets
-    shouldBeError result
+    shouldBeError result |> ignore
    
