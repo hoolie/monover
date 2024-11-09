@@ -24,6 +24,7 @@ let runCommand( command: Parsed<obj>) =
         match command.Value with
         | :? PublishOptions as opts -> (RunPublish opts)
         | :? NewChangesetOption as opts -> CreateChangesetCommand.Run opts
+        | :? InitOptions -> InitCommand.Run ()
         | _ -> Result.Error (UnknownCommand command.TypeInfo.Current.Name )
     match result with
         | Error e -> printError e
@@ -31,7 +32,12 @@ let runCommand( command: Parsed<obj>) =
     
 [<EntryPoint>]
 let main argv =
-    let options = Parser.Default.ParseArguments<PublishOptions,NewChangesetOption> argv
+    let options = Parser.Default.
+                    ParseArguments<
+                        PublishOptions,
+                        NewChangesetOption,
+                        InitOptions
+                    > argv
     match options with
         | :? Parsed<obj> as command -> runCommand command
         | :? NotParsed<obj> as p -> printError (MissingCommand())

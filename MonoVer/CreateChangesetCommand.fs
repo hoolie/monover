@@ -18,7 +18,10 @@ type NewChangesetOption =
       [<Option('i', "impact", Required = true, HelpText ="The impact this change has on the affected project" )>]
       Impact: string
       [<Option('p', "projects", Required = true, HelpText = "The project(s) that are affected")>]
-      Projects: string seq }
+      Projects: string seq
+      [<Option('m', "message", Required = true, HelpText = "The project(s) that are affected")>]
+      Message: string
+       }
    
 type CreateChangesetError =
     | MsProjectsError of MsProjectsError
@@ -36,6 +39,7 @@ module CreateChangesetCommand =
         Name = rawName
         Impact = rawImpact
         Projects = projects
+        Message = message
         Workdir = workdir
     }: NewChangesetOption): Result<unit,ApplicationError> =
         let changesetName =
@@ -57,9 +61,10 @@ module CreateChangesetCommand =
                         |>> (fun proj-> {Project= proj; Impact = impact})
             let changeset = Changeset.Serialize {
                 AffectedProjects = affectedProjects
-                Description =  ChangesetDescription.ChangesetDescription ""
+                Description = ChangesetDescription.ChangesetDescription message
             }
             File.WriteAllText (Path.Join(workdir, ".changesets", changesetName + ".md"), changeset)
+            Console.WriteLine($"Created: {changesetName}.md")
             return ()
              
         }
