@@ -7,8 +7,8 @@ open NUnit.Framework
 let createTestChangeset() =
     {
         AffectedProjects = [
-            { Project = TargetProject "ProjectA"; Impact = SemVerImpact.Major }
-            { Project = TargetProject "ProjectB"; Impact = SemVerImpact.Minor }
+            { Project = ProjectId "ProjectA"; Impact = SemVerImpact.Major }
+            { Project = ProjectId "ProjectB"; Impact = SemVerImpact.Minor }
         ]
         Description = ChangesetDescription.ChangesetDescription
                           """Added a new feature
@@ -53,7 +53,7 @@ let ``Serialize should handle only affected projects with no descriptions``() =
 
     let changesetWithOnlyProjects = {
         AffectedProjects = [
-            { Project = TargetProject "ProjectA"; Impact = SemVerImpact.Patch }
+            { Project = ProjectId "ProjectA"; Impact = SemVerImpact.Patch }
         ]
         Description = ChangesetDescription.Empty
     }

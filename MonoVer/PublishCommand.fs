@@ -34,9 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 """
 
-let ReadChangelogFor (Csproj path: Csproj) : Changelog =
-    let csprojDir = FileInfo(path).DirectoryName
-    let path = FileInfo(Path.Join(csprojDir, "Changelog.md"))
+let ReadChangelogFor ( path: DirectoryInfo) : Changelog =
+    let path = FileInfo(Path.Join(path.FullName, "Changelog.md"))
     { Path = path
       Content =
         match path.Exists with
@@ -59,7 +58,14 @@ let private updateVersion solution (newVersion: VersionIncreased) =
      |> Result.mapError PublishDomainErrors.UpdateVersionError
                                       
 let private processChangesets projects = Changesets.Publish projects >> (Result.mapError PublishDomainErrors.PublishError)
-let private updateChangelog ({Project = project; Changes = changes; Version = version}: NewChangelogEntry) =
+let private updateChangelog (solution:MsProjects.MsSolution) ({Project = project; Changes = changes; Version = version}: NewChangelogEntry) =
+        let project =
+            Map.tryFind project solution
+            |> Option.map _.FullPath
+            |> Option.map FileInfo
+            |> Option.map _.Directory
+            |> Option.get // todo: this throws!
+                        
         let changelogEntry:ChangelogVersionEntry = { Version = version; Date = DateOnly.FromDateTime DateTime.Today; Changes = changes }
         let oldChangelog = ReadChangelogFor project
         let newChangelog = AddEntry oldChangelog changelogEntry
@@ -86,7 +92,7 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
         // execute changes
         return! publishResult
                         |> List.map (function
-                            | NewChangelogEntry newEntry -> updateChangelog newEntry
+                            | NewChangelogEntry newEntry -> updateChangelog solution newEntry
                             | VersionIncreased projectVersion -> updateVersion solution projectVersion 
                             | ChangesetApplied changesetId -> deleteChangeset changesetId )
                         |> sequence

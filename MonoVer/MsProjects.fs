@@ -1,5 +1,7 @@
 namespace MonoVer
 
+open MonoVer.Domain
+
 type MsProjectsError = 
     | SolutionFileNotFoundInWorkdir of string
     | MultipleSolutionFilesFoundInWorkdir of string seq
@@ -10,14 +12,15 @@ module MsProjects =
     open Microsoft.Build.Evaluation
 
     type MsProject = Project
-    type MsSolution = Map<string, MsProject>
+    type MsSolution = Map<ProjectId, MsProject>
 
 
     let Load (pathToSolution: string) : MsSolution =
         SolutionFile.Parse pathToSolution
         |>_.ProjectsInOrder
         |> Seq.filter (fun p -> p.ProjectType = SolutionProjectType.KnownToBeMSBuildFormat)
-        |> Seq.map (fun p -> (p.AbsolutePath, Project(p.AbsolutePath)))
+        |> Seq.map (fun p ->  Project(p.AbsolutePath))
+        |> Seq.map (fun p -> ((ProjectId (p.GetPropertyValue("MsBuildProjectName"))), p))
         |> Map
         
     let TryLoadFrom(workdir: string) =

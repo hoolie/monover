@@ -1,9 +1,7 @@
 namespace MonoVer.Domain
 
-open System.IO
-
 type Project = {
-    Csproj: FileInfo
+    Csproj: ProjectId
     CurrentVersion: Version
     Dependencies: Project list
 }
@@ -23,14 +21,13 @@ type ProjectChange =
 
     
 
-type Csproj = Csproj of string
 
 type NewChangelogEntry =
-    { Project: Csproj
+    { Project: ProjectId
       Changes: ChangeDescriptions
       Version: Version }
 
-type VersionIncreased = { Project: Csproj; Version: Version }
+type VersionIncreased = { Project: ProjectId; Version: Version }
 
 
 type PublishEvent =
@@ -42,15 +39,15 @@ type MergedChangesets = Result<PublishEvent list, PublishError>
 type ProcessChangesets = RawChangesets -> MergedChangesets
 module Changesets = 
 
-    open System.IO
 
     let ParseRaw = List.map Changeset.ParseRaw >> FSharpPlus.Operators.sequence
 
     let private dependsOn (dependant: Project) (project: Project) =
         project.Dependencies |> List.exists (fun x -> x.Csproj = dependant.Csproj)
 
-    let private findProjectByCsproj (projects: Project list) (TargetProject csproj: TargetProject) =
-        projects |> List.find (fun p -> p.Csproj.FullName = (FileInfo csproj).FullName)
+    let private findProjectByCsproj (projects: Project list) (projectId: ProjectId) =
+        // todo: what if ProjectNotFound? This can either be done while parsing, or here with try find, or maybe both.
+        projects |> List.find (fun p -> p.Csproj = projectId)
 
     let private projectChangeFromAffectedProject
         (projects: Project list)
@@ -75,11 +72,12 @@ module Changesets =
 
     let rec publishTransientUpdates (projects: Project list) (projectChange: ProjectChange) : ProjectChange list =
         let updateProject project =
+            let (ProjectId projectId) = projectChange.Project.Csproj
             let projectChange =
                 { projectChange with
                     Impact = Patch
                     Project = project
-                    Description = Some (ChangeDescription $"updated dependency {projectChange.Project.Csproj.Name}")
+                    Description = Some (ChangeDescription $"updated dependency { projectId }")
                     DependencyGraph = project :: projectChange.DependencyGraph }
 
             projectChange :: (publishTransientUpdates projects projectChange)
@@ -127,11 +125,11 @@ module Changesets =
 
 
         [ NewChangelogEntry
-              { Project = Csproj project.Csproj.FullName
+              { Project =  project.Csproj
                 Changes = ChangeDescriptions.Create descriptionsByImpact
                 Version = nextVersion }
           VersionIncreased
-              { Project = Csproj project.Csproj.FullName
+              { Project =  project.Csproj
                 Version = nextVersion } ]
     open FSharpPlus
     let Publish projects : ProcessChangesets =

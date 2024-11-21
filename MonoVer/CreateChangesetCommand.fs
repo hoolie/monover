@@ -29,10 +29,11 @@ type CreateChangesetError =
 module CreateChangesetCommand =
     
     let private tryFindProjectInSolution (solution: MsProjects.MsSolution) (projectName: string) =
-            Map.values solution
-            |> Seq.tryFind (fun p -> p.GetPropertyValue("MsBuildProjectName") = projectName)
+            
+            Map.keys solution
+            |> Seq.tryFind (fun key -> key = (ProjectId projectName))
             |> function
-                | Some project -> Ok (TargetProject (Path.GetRelativePath(Directory.GetCurrentDirectory(), project.FullPath)))
+                | Some project -> Ok project
                 | None -> Result.Error (ProjectNotFound projectName)
     let Run ({
         Name = rawName

@@ -1,7 +1,5 @@
 namespace MonoVer.Domain
 
-type TargetProject = TargetProject of string
-
 type ChangesetDescription =
     | ChangesetDescription of string
     | Empty
@@ -9,7 +7,7 @@ type ChangesetId = ChangesetId of string
 
 type RawChangeset = ChangesetId * string
 type AffectedProject = {
-      Project: TargetProject
+      Project: ProjectId
       Impact: SemVerImpact
 }
 type ChangesetContent = {
@@ -45,7 +43,7 @@ module Changeset =
     let private pAffectedProject =
         projectName .>>. (pchar ':' >>. spaces >>. pImpact)
         |>> (fun (name, impact) ->
-            { Project = TargetProject name
+            { Project = ProjectId name
               Impact = impact })
 
     // Parser for multiple lines of project impact
@@ -76,7 +74,7 @@ module Changeset =
 
     let appendLine (content: string) (sb: StringBuilder) = sb.AppendLine(content)
     let serializeAffectedProject
-        ({ Project = (TargetProject project)
+        ({ Project = (ProjectId project)
            Impact = impact }: AffectedProject)
         = appendLine $"\"{project}\": {SemVerImpact.Serialize impact}"
     // Serialize an AffectedProject list to the specified format

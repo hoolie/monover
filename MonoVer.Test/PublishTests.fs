@@ -1,13 +1,12 @@
 [<NUnit.Framework.TestFixture>]
 module MonoVer.Test.PublishTests
 
-open System.IO
 open MonoVer.Domain
 open FsUnit
 open NUnit.Framework
 
 // Mock data
-let mockFileInfo path = FileInfo(path)
+let mockFileInfo path = ProjectId(path)
 
 let shouldBeOk result =
     match result with
@@ -36,14 +35,14 @@ let mockChangeset id content : RawChangeset = ((ChangesetId id), content)
 
 let mockAffectedProject project impact = { Project = project; Impact = impact }
 
-let mockTargetProject name = Csproj name
+let mockTargetProject name = ProjectId name
 
 
 
 let NewChangelogEntry (project:Project)(version:string) =
     NewChangelogEntry {
         Version = Version.FromString version
-        Project = Csproj project.Csproj.FullName
+        Project = project.Csproj
         Changes = ChangeDescriptions.Empty
     }
 let Major desc (event: PublishEvent) =
@@ -63,11 +62,12 @@ let Patch desc (event: PublishEvent):PublishEvent =
 
 let VersionIncreased (project:Project) (version:string) =
     VersionIncreased
-      { Project = Csproj project.Csproj.FullName
+      { Project = project.Csproj
         Version = Version.FromString version }
 let ChangesetApplied ((id,_): RawChangeset) =
     ChangesetApplied id
 // Unit tests
+
 [<Test>]
 let ``No changesets results in no publish results`` () =
     let projects = [ mockProject "TestProject" (mockVersion 1u 0u 0u) [] ]
