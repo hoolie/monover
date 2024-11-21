@@ -1,7 +1,6 @@
 module MonoVer.UpdateCsproj
 
 open FSharpPlus
-open MonoVer.Domain.Types
 open MonoVer.Domain
 open MonoVer.MsProjects
 

@@ -5,7 +5,6 @@ open System.IO
 open FSharpPlus
 open CommandLine
 open MonoVer.Cli
-open MonoVer.Domain.Types
 open MonoVer.Domain
 
 [<Verb("new", HelpText = "Add a new changeset.")>]

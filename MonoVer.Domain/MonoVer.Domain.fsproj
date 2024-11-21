@@ -7,11 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Types.fs" />
-        <Compile Include="SemVerImpact.fs" />
-        <Compile Include="Publish.Types.fs" />
-        <Compile Include="ChangeDescriptions.fs" />
         <Compile Include="Version.fs" />
+        <Compile Include="SemVerImpact.fs" />
+        <Compile Include="ChangeDescriptions.fs" />
         <Compile Include="Changeset.fs" />
         <Compile Include="Changesets.fs" />
     </ItemGroup>

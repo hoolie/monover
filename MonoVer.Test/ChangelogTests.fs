@@ -4,7 +4,6 @@ open System
 open System.IO
 open MonoVer
 open MonoVer.Domain
-open MonoVer.Domain.Types
 open FsUnit
 open NUnit.Framework
 

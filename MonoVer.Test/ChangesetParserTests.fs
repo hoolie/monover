@@ -1,7 +1,6 @@
 module MonoVer.Test.ChangesetParserTests
 
 open FsUnit
-open MonoVer.Domain.Types
 open MonoVer.Domain
 open NUnit.Framework
 

@@ -1,6 +1,5 @@
 module MonoVer.Test.ChangesetSerializeTests
 
-open MonoVer.Domain.Types
 open MonoVer.Domain
 open FsUnit
 open NUnit.Framework

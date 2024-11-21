@@ -1,79 +1,101 @@
-module MonoVer.Domain.Changeset
+namespace MonoVer.Domain
 
-open System.Text
-open MonoVer.Domain.Types
-open FParsec
+type TargetProject = TargetProject of string
 
-let private pImpact =
-    choice
-        [ pstringCI "major" >>% SemVerImpact.Major
-          pstringCI "minor" >>% SemVerImpact.Minor
-          pstringCI "patch" >>% SemVerImpact.Patch ]
+type ChangesetDescription =
+    | ChangesetDescription of string
+    | Empty
+type ChangesetId = ChangesetId of string
 
-let private pHorizontalLine = pstring "---" .>> many (pchar '-') .>> spaces
+type RawChangeset = ChangesetId * string
+type AffectedProject = {
+      Project: TargetProject
+      Impact: SemVerImpact
+}
+type ChangesetContent = {
+      AffectedProjects: AffectedProject list
+      Description: ChangesetDescription
+}
+type PublishError = FailedToParseChangeset of (ChangesetId * string)
+type Changeset = {
+    Id: ChangesetId
+    Content: ChangesetContent
+}
+module Changeset = 
 
-let private pSectionHeading name =
-    spaces >>. pstring ("# " + name) .>> spaces
+    open System.Text
+    open FParsec
 
-// Parser for a project name (quoted string)
-let private projectName =
-    between (pchar '"') (pchar '"') (manyChars (noneOf "\"")) .>> spaces
+    let private pImpact =
+        choice
+            [ pstringCI "major" >>% SemVerImpact.Major
+              pstringCI "minor" >>% SemVerImpact.Minor
+              pstringCI "patch" >>% SemVerImpact.Patch ]
 
-// Parser for a single line in the format: "ProjectName": status
-let private pAffectedProject =
-    projectName .>>. (pchar ':' >>. spaces >>. pImpact)
-    |>> (fun (name, impact) ->
-        { Project = TargetProject name
-          Impact = impact })
+    let private pHorizontalLine = pstring "---" .>> many (pchar '-') .>> spaces
 
-// Parser for multiple lines of project impact
-let private pAffectedProjects = many (pAffectedProject .>> spaces)
+    let private pSectionHeading name =
+        spaces >>. pstring ("# " + name) .>> spaces
 
-// Parser for the entire document including the dashes
-let private pAffectedProjectsSection =
-    between pHorizontalLine pHorizontalLine pAffectedProjects
+    // Parser for a project name (quoted string)
+    let private projectName =
+        between (pchar '"') (pchar '"') (manyChars (noneOf "\"")) .>> spaces
 
-// Parser for the entire document
-let private pChangeset =
-    pAffectedProjectsSection .>>. manyChars anyChar
-    |>> (fun (projects, descriptions) ->
-        { AffectedProjects = projects
-          Description = ChangesetDescription.ChangesetDescription descriptions })
+    // Parser for a single line in the format: "ProjectName": status
+    let private pAffectedProject =
+        projectName .>>. (pchar ':' >>. spaces >>. pImpact)
+        |>> (fun (name, impact) ->
+            { Project = TargetProject name
+              Impact = impact })
 
-// Parser for all sections of descriptions
-let Parse markdown : Result<ChangesetContent, string> =
-    match run pChangeset markdown with
-    | Success(changeset, _, _) -> Result.Ok changeset
-    | Failure(errorMessage, _, _) -> Result.Error errorMessage
+    // Parser for multiple lines of project impact
+    let private pAffectedProjects = many (pAffectedProject .>> spaces)
 
-let ParseRaw ((id, content): RawChangeset) : Result<Changeset, PublishError> =
-    content
-    |> Parse
-    |> Result.mapError (fun e -> FailedToParseChangeset(id, e))
-    |> Result.map (fun parsed -> { Id = id; Content = parsed })
+    // Parser for the entire document including the dashes
+    let private pAffectedProjectsSection =
+        between pHorizontalLine pHorizontalLine pAffectedProjects
 
-let appendLine (content: string) (sb: StringBuilder) = sb.AppendLine(content)
-let serializeAffectedProject
-    ({ Project = (TargetProject project)
-       Impact = impact }: AffectedProject)
-    = appendLine $"\"{project}\": {SemVerImpact.Serialize impact}"
-// Serialize an AffectedProject list to the specified format
-let serializeAffectedProjects (projects: AffectedProject list)  =
-    appendLine "---"
-    >> (List.fold (fun sbf ap -> sbf >> serializeAffectedProject ap) id<StringBuilder> projects)
-    >> appendLine "---"
+    // Parser for the entire document
+    let private pChangeset =
+        pAffectedProjectsSection .>>. manyChars anyChar
+        |>> (fun (projects, descriptions) ->
+            { AffectedProjects = projects
+              Description = ChangesetDescription.ChangesetDescription descriptions })
 
-// Serialize Descriptions to grouped sections
-let serializeDescriptions (unorderedDescriptions: ChangesetDescription) =
-     match unorderedDescriptions with
-      | ChangesetDescription x -> appendLine x
-      | Empty -> id<StringBuilder>
+    // Parser for all sections of descriptions
+    let Parse markdown : Result<ChangesetContent, string> =
+        match run pChangeset markdown with
+        | Success(changeset, _, _) -> Result.Ok changeset
+        | Failure(errorMessage, _, _) -> Result.Error errorMessage
+
+    let ParseRaw ((id, content): RawChangeset) : Result<Changeset, PublishError> =
+        content
+        |> Parse
+        |> Result.mapError (fun e -> FailedToParseChangeset(id, e))
+        |> Result.map (fun parsed -> { Id = id; Content = parsed })
+
+    let appendLine (content: string) (sb: StringBuilder) = sb.AppendLine(content)
+    let serializeAffectedProject
+        ({ Project = (TargetProject project)
+           Impact = impact }: AffectedProject)
+        = appendLine $"\"{project}\": {SemVerImpact.Serialize impact}"
+    // Serialize an AffectedProject list to the specified format
+    let serializeAffectedProjects (projects: AffectedProject list)  =
+        appendLine "---"
+        >> (List.fold (fun sbf ap -> sbf >> serializeAffectedProject ap) id<StringBuilder> projects)
+        >> appendLine "---"
+
+    // Serialize Descriptions to grouped sections
+    let serializeDescriptions (unorderedDescriptions: ChangesetDescription) =
+         match unorderedDescriptions with
+          | ChangesetDescription x -> appendLine x
+          | Empty -> id<StringBuilder>
 
 
 
-// Main serialization function for ChangesetContent
-let Serialize (changeset: ChangesetContent) =
-    StringBuilder()
-    |> serializeAffectedProjects changeset.AffectedProjects
-    |> serializeDescriptions changeset.Description
-    |> _.ToString()
+    // Main serialization function for ChangesetContent
+    let Serialize (changeset: ChangesetContent) =
+        StringBuilder()
+        |> serializeAffectedProjects changeset.AffectedProjects
+        |> serializeDescriptions changeset.Description
+        |> _.ToString()

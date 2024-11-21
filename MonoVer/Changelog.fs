@@ -3,7 +3,7 @@ namespace MonoVer
 open System.IO
 open System
 open FSharpPlus
-open MonoVer.Domain.Types
+open MonoVer.Domain
 type Changelog  = {
     Path: FileInfo
     Content: string

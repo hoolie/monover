@@ -2,7 +2,6 @@
 module MonoVer.Test.PublishTests
 
 open System.IO
-open MonoVer.Domain.Types
 open MonoVer.Domain
 open FsUnit
 open NUnit.Framework
@@ -32,7 +31,7 @@ let mockVersion major minor patch : Version =
 
 
 
-let mockChangeset id content : RawChangeset = ((Id id), content)
+let mockChangeset id content : RawChangeset = ((ChangesetId id), content)
 
 
 let mockAffectedProject project impact = { Project = project; Impact = impact }

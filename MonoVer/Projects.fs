@@ -6,7 +6,6 @@ module Projects =
     open MonoVer.MsProjects
     open System.Collections.Generic
     open System.IO
-    open MonoVer.Domain.Types
     open MonoVer.Domain
 
     type private SlnProject = string * Version

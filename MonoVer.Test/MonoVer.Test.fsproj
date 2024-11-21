@@ -18,6 +18,8 @@
   <ItemGroup>
     <PackageReference Include="FsUnit" Version="6.0.0" />
     <PackageReference Include="Markdig" Version="0.37.0" />
+    <PackageReference Include="NUnit" Version="*" />
+    <PackageReference Include="NUnit3TestAdapter" Version="*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

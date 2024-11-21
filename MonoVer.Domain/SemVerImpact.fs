@@ -1,10 +1,13 @@
 namespace MonoVer.Domain
 
+type SemVerImpact =
+    | Major
+    | Minor
+    | Patch
 type ParseImpactError = FailedToParseImpact of string
 module SemVerImpact =
 
     open FSharpPlus
-    open MonoVer.Domain.Types
     
     let Parse rawImpact =
         match String.toLower rawImpact with

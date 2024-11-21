@@ -9,7 +9,6 @@ open MonoVer
 open MonoVer.Changelog
 open MonoVer.Cli
 open MonoVer.Domain
-open MonoVer.Domain.Types
 open MonoVer.UpdateCsproj
 
 
@@ -47,7 +46,7 @@ let ReadChangelogFor (Csproj path: Csproj) : Changelog =
 let private loadRawChangesets =
     DirectoryInfo 
     >> _.EnumerateFiles("*.md")
-    >> Seq.map (fun file -> ((ChangesetId.Id file.FullName), File.ReadAllText file.FullName))
+    >> Seq.map (fun file -> ((ChangesetId.ChangesetId file.FullName), File.ReadAllText file.FullName))
     >> Seq.toList
     
 let private loadSolution workdir =
@@ -68,7 +67,7 @@ let private updateChangelog ({Project = project; Changes = changes; Version = ve
         File.WriteAllText(newChangelog.Path.FullName, newChangelog.Content)
         Ok()
    
-let private deleteChangeset (Id id) =
+let private deleteChangeset (ChangesetId id) =
     Console.WriteLine $"Delete file '{id}'"
     Ok (
         //File.Delete id
@@ -95,7 +94,7 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
     }
     |> Result.mapError (
         function
-        | PublishError (FailedToParseChangeset (Id x,e)) -> CommandError (-4, $"""Failed to parse Changeset with name {x}.md:{e}""" )
+        | PublishError (FailedToParseChangeset (ChangesetId x,e)) -> CommandError (-4, $"""Failed to parse Changeset with name {x}.md:{e}""" )
         | MsProjectsError (SolutionFileNotFoundInWorkdir x) -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
         | MsProjectsError (MultipleSolutionFilesFoundInWorkdir x) -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
         | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project} to version {Version.ToString e.Version} ")
