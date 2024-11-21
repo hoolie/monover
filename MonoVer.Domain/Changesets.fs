@@ -1,7 +1,7 @@
 namespace MonoVer.Domain
 
 type Project = {
-    Csproj: ProjectId
+    Id: ProjectId
     CurrentVersion: Version
     Dependencies: Project list
 }
@@ -43,11 +43,11 @@ module Changesets =
     let ParseRaw = List.map Changeset.ParseRaw >> FSharpPlus.Operators.sequence
 
     let private dependsOn (dependant: Project) (project: Project) =
-        project.Dependencies |> List.exists (fun x -> x.Csproj = dependant.Csproj)
+        project.Dependencies |> List.exists (fun x -> x.Id = dependant.Id)
 
     let private findProjectByCsproj (projects: Project list) (projectId: ProjectId) =
         // todo: what if ProjectNotFound? This can either be done while parsing, or here with try find, or maybe both.
-        projects |> List.find (fun p -> p.Csproj = projectId)
+        projects |> List.find (fun p -> p.Id = projectId)
 
     let private projectChangeFromAffectedProject
         (projects: Project list)
@@ -72,7 +72,7 @@ module Changesets =
 
     let rec publishTransientUpdates (projects: Project list) (projectChange: ProjectChange) : ProjectChange list =
         let updateProject project =
-            let (ProjectId projectId) = projectChange.Project.Csproj
+            let (ProjectId projectId) = projectChange.Project.Id
             let projectChange =
                 { projectChange with
                     Impact = Patch
@@ -125,11 +125,11 @@ module Changesets =
 
 
         [ NewChangelogEntry
-              { Project =  project.Csproj
+              { Project =  project.Id
                 Changes = ChangeDescriptions.Create descriptionsByImpact
                 Version = nextVersion }
           VersionIncreased
-              { Project =  project.Csproj
+              { Project =  project.Id
                 Version = nextVersion } ]
     open FSharpPlus
     let Publish projects : ProcessChangesets =

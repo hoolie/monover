@@ -68,7 +68,7 @@ module Projects =
 
                     // Create the Project node
                     let resolvedProject =
-                        { Csproj = projectId
+                        { Id = projectId
                           CurrentVersion = version
                           Dependencies = resolvedDependencies }
 
@@ -78,7 +78,7 @@ module Projects =
                 | None ->
                     // Handle case where the project is not found, which shouldn't happen
                     let proj =
-                        { Csproj = projectId // todo: this should be the real project name
+                        { Id = projectId // todo: this should be the real project name
                           CurrentVersion = version
                           Dependencies = [] }
 

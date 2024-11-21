@@ -19,7 +19,7 @@ let shouldBeError result =
     | Error e -> e
 
 let mockProject name version dependencies : Project =
-    { Csproj = mockFileInfo name
+    { Id = mockFileInfo name
       CurrentVersion = version
       Dependencies = dependencies }
 
@@ -42,7 +42,7 @@ let mockTargetProject name = ProjectId name
 let NewChangelogEntry (project:Project)(version:string) =
     NewChangelogEntry {
         Version = Version.FromString version
-        Project = project.Csproj
+        Project = project.Id
         Changes = ChangeDescriptions.Empty
     }
 let Major desc (event: PublishEvent) =
@@ -62,7 +62,7 @@ let Patch desc (event: PublishEvent):PublishEvent =
 
 let VersionIncreased (project:Project) (version:string) =
     VersionIncreased
-      { Project = project.Csproj
+      { Project = project.Id
         Version = Version.FromString version }
 let ChangesetApplied ((id,_): RawChangeset) =
     ChangesetApplied id
