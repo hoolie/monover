@@ -101,6 +101,7 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
     |> Result.mapError (
         function
         | PublishError (FailedToParseChangeset (ChangesetId x,e)) -> CommandError (-4, $"""Failed to parse Changeset with name {x}.md:{e}""" )
+        | PublishError (ProjectNotFound p) -> CommandError (-4, $"""Failed to parse Changeset: project with name {p} mot found""" )
         | MsProjectsError (SolutionFileNotFoundInWorkdir x) -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
         | MsProjectsError (MultipleSolutionFilesFoundInWorkdir x) -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
         | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project} to version {Version.ToString e.Version} ")

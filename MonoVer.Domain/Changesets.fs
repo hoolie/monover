@@ -1,5 +1,7 @@
 namespace MonoVer.Domain
 
+open FSharpPlus.Data
+
 type Project = {
     Id: ProjectId
     CurrentVersion: Version
@@ -40,23 +42,22 @@ type ProcessChangesets = RawChangesets -> MergedChangesets
 module Changesets = 
 
 
-    let ParseRaw = List.map Changeset.ParseRaw >> FSharpPlus.Operators.sequence
+    let ParseRaw projectIds = List.map (Changeset.ParseRaw projectIds) >> FSharpPlus.Operators.sequence
 
     let private dependsOn (dependant: Project) (project: Project) =
         project.Dependencies |> List.exists (fun x -> x.Id = dependant.Id)
 
     let private findProjectByCsproj (projects: Project list) (projectId: ProjectId) =
-        // todo: what if ProjectNotFound? This can either be done while parsing, or here with try find, or maybe both.
         projects |> List.find (fun p -> p.Id = projectId)
 
     let private projectChangeFromAffectedProject
         (projects: Project list)
-        (changeset: Changeset)
+        (changeset: ValidChangeset)
         (affectedProject: AffectedProject)
         =
         let project = findProjectByCsproj projects affectedProject.Project
         let description =
-            match changeset.Content.Description with
+            match changeset.Description with
             | ChangesetDescription desc -> Some (ChangeDescription desc)
             | Empty -> None
 
@@ -66,8 +67,8 @@ module Changesets =
           Description = description
           DependencyGraph = [ project ] }
 
-    let private splitChangeset (projects: Project list) (changeset: Changeset) : ProjectChange list =
-        changeset.Content.AffectedProjects
+    let private splitChangeset (projects: Project list) (changeset: ValidChangeset) : ProjectChange list =
+        changeset.AffectedProjects
         |> List.map (projectChangeFromAffectedProject projects changeset)
 
     let rec publishTransientUpdates (projects: Project list) (projectChange: ProjectChange) : ProjectChange list =
@@ -134,7 +135,7 @@ module Changesets =
     open FSharpPlus
     let Publish projects : ProcessChangesets =
         fun rawChangesets -> 
-            (ParseRaw rawChangesets
+            (ParseRaw (projects|>> _.Id) rawChangesets 
             |>> (fun changesets ->
                 (List.collect(splitChangeset projects) changesets
                 >>= publishTransientUpdates projects

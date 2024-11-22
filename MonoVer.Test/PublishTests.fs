@@ -228,7 +228,6 @@ Fix in ProjectB""")
         ]
 
 [<Test>]
-[<Ignore("not yet implemented")>]
 let ``Changeset with invalid projects should yield an error`` () =
     let project = mockProject "TestProject" (mockVersion 1u 0u 0u) []
 

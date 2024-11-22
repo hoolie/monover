@@ -6,10 +6,12 @@ open NUnit.Framework
 
 type ChangesetParserTests() =
 
-    let createExpectedChangeset() =
+    let expectedChangeset: UnvalidatedChangeset =
         {
-          AffectedProjects = [ { Project = ProjectId "ProjectA"; Impact = SemVerImpact.Major }
-                               { Project = ProjectId "ProjectB"; Impact = SemVerImpact.Minor } ]
+          
+          Id = ChangesetId "1"
+          AffectedProjects = [ { Project =  "ProjectA"; Impact = SemVerImpact.Major }
+                               { Project = "ProjectB"; Impact = SemVerImpact.Minor } ]
           Description = ChangesetDescription
 """Added some new features
 Fixed some bugs
@@ -25,9 +27,8 @@ Fixed some bugs
 Added some new features
 Fixed some bugs
 """
-        let expected = createExpectedChangeset()
-        match Changeset.Parse markdown with
-        | Ok changeset -> changeset |> should equal expected
+        match Changeset.Parse (ChangesetId "1") markdown with
+        | Ok changeset -> changeset |> should equal expectedChangeset
         | Error errorMsg -> failwith $"Expected Ok but got Error: {errorMsg}"
 
     [<Test>]
@@ -41,7 +42,7 @@ Fixed some bugs
         # Fixed
         Fixed some bugs
         """
-        match Changeset.Parse invalidMarkdown with
+        match Changeset.Parse (ChangesetId "1") invalidMarkdown with
         | Ok _ -> failwith "Expected Error but got Ok"
         | Error _ -> ()
 
@@ -52,7 +53,7 @@ Fixed some bugs
         # Fixed
         Fixed some bugs
         """
-        match Changeset.Parse markdownWithoutProjects with
+        match Changeset.Parse (ChangesetId "1") markdownWithoutProjects with
         | Ok _ -> failwith "Expected Error but got Ok"
         | Error _ -> ()
         
@@ -63,7 +64,7 @@ Fixed some bugs
         "ProjectB": minor
         ---
         """
-        match Changeset.Parse markdownWithoutDescriptions with
+        match Changeset.Parse (ChangesetId "1") markdownWithoutDescriptions with
         | Error _ -> failwith "Expected Ok but got Error"
         | Ok _ -> ()
 
@@ -80,15 +81,16 @@ Fixed some bugs
 # Changed
 Changed some functionality
 """
-        let expected = 
+        let expected: UnvalidatedChangeset = 
             {
-              AffectedProjects = [ { Project = ProjectId "ProjectA"; Impact = SemVerImpact.Major }
-                                   { Project = ProjectId "ProjectB"; Impact = SemVerImpact.Minor } ]
+              Id = ChangesetId "1"
+              AffectedProjects = [ { Project = "ProjectA"; Impact = SemVerImpact.Major }
+                                   { Project = "ProjectB"; Impact = SemVerImpact.Minor } ]
               Description = ChangesetDescription
 """Added some new features
 Fixed some bugs
 Changed some functionality"""
             }
-        match Changeset.Parse markdown with
-        | Ok changeset -> changeset.AffectedProjects |> should equal expected.AffectedProjects
+        match Changeset.Parse (ChangesetId "1") markdown with
+        | Ok changeset -> changeset.AffectedProjects |> should equivalent expected.AffectedProjects
         | Error errorMsg -> failwith $"Expected Ok but got Error: {errorMsg}"

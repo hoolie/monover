@@ -6,19 +6,30 @@ type ChangesetDescription =
 type ChangesetId = ChangesetId of string
 
 type RawChangeset = ChangesetId * string
+type UnvalidatedAffectedProject = {
+      Project: string
+      Impact: SemVerImpact
+}
+type PublishError = FailedToParseChangeset of (ChangesetId * string)
+                    |ProjectNotFound of string
+type UnvalidatedChangeset = {
+    Id: ChangesetId
+    AffectedProjects: UnvalidatedAffectedProject list
+    Description: ChangesetDescription
+}
+
 type AffectedProject = {
       Project: ProjectId
       Impact: SemVerImpact
 }
-type ChangesetContent = {
-      AffectedProjects: AffectedProject list
-      Description: ChangesetDescription
-}
-type PublishError = FailedToParseChangeset of (ChangesetId * string)
-type Changeset = {
+type ValidChangeset = {
     Id: ChangesetId
-    Content: ChangesetContent
+    AffectedProjects: AffectedProject list
+    Description: ChangesetDescription
 }
+type ParseChangeset = RawChangeset -> UnvalidatedChangeset
+
+type ValidateChangeset = UnvalidatedChangeset -> Result<ValidChangeset,PublishError>
 module Changeset = 
 
     open System.Text
@@ -40,10 +51,10 @@ module Changeset =
         between (pchar '"') (pchar '"') (manyChars (noneOf "\"")) .>> spaces
 
     // Parser for a single line in the format: "ProjectName": status
-    let private pAffectedProject =
+    let private pAffectedProject:Parser<UnvalidatedAffectedProject,unit> =
         projectName .>>. (pchar ':' >>. spaces >>. pImpact)
         |>> (fun (name, impact) ->
-            { Project = ProjectId name
+            { Project = name
               Impact = impact })
 
     // Parser for multiple lines of project impact
@@ -54,23 +65,46 @@ module Changeset =
         between pHorizontalLine pHorizontalLine pAffectedProjects
 
     // Parser for the entire document
-    let private pChangeset =
+    let private pChangeset id : Parser<UnvalidatedChangeset, unit>=
         pAffectedProjectsSection .>>. manyChars anyChar
         |>> (fun (projects, descriptions) ->
-            { AffectedProjects = projects
+            { Id=id
+              AffectedProjects = projects
               Description = ChangesetDescription.ChangesetDescription descriptions })
 
     // Parser for all sections of descriptions
-    let Parse markdown : Result<ChangesetContent, string> =
-        match run pChangeset markdown with
+    let Parse id markdown : Result<UnvalidatedChangeset, string> =
+        match run (pChangeset id) markdown with
         | Success(changeset, _, _) -> Result.Ok changeset
         | Failure(errorMessage, _, _) -> Result.Error errorMessage
 
-    let ParseRaw ((id, content): RawChangeset) : Result<Changeset, PublishError> =
+    let private validateAffectedProject
+        (projectIds:ProjectId list)
+        (affectedProject:UnvalidatedAffectedProject):Result<AffectedProject,PublishError> =
+        let projectId = (affectedProject.Project|> ProjectId)
+        match Seq.contains projectId projectIds with
+        | true -> Result.Ok {Impact = affectedProject.Impact; Project= projectId}
+        | false -> Result.Error (ProjectNotFound affectedProject.Project)
+        
+    let Validate (projectIds) :ValidateChangeset = function
+        x -> x.AffectedProjects
+             |> Seq.map (validateAffectedProject projectIds)
+             |> FSharpPlus.Operators.sequence
+             |> Result.map (fun affectedProjects
+                             -> {
+                 Id = x.Id
+                 Description = x.Description
+                 AffectedProjects = Seq.toList affectedProjects  
+             })
+        
+    let ParseRaw
+        (validProjectIds:ProjectId list) // dependency
+        ((id, content): RawChangeset)
+            : Result<ValidChangeset, PublishError> =
         content
-        |> Parse
+        |> Parse id
         |> Result.mapError (fun e -> FailedToParseChangeset(id, e))
-        |> Result.map (fun parsed -> { Id = id; Content = parsed })
+        |> Result.bind  (Validate validProjectIds)
 
     let appendLine (content: string) (sb: StringBuilder) = sb.AppendLine(content)
     let serializeAffectedProject
@@ -92,7 +126,7 @@ module Changeset =
 
 
     // Main serialization function for ChangesetContent
-    let Serialize (changeset: ChangesetContent) =
+    let Serialize (changeset: ValidChangeset) =
         StringBuilder()
         |> serializeAffectedProjects changeset.AffectedProjects
         |> serializeDescriptions changeset.Description

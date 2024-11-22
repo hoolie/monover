@@ -56,10 +56,12 @@ module CreateChangesetCommand =
                     |> Seq.toList
                     |>> (tryFindProjectInSolution solution)
                     |> sequence
+                    
             let affectedProjects =
                         validatedProjects
                         |>> (fun proj-> {Project= proj; Impact = impact})
             let changeset = Changeset.Serialize {
+                Id = ChangesetId "todo"
                 AffectedProjects = affectedProjects
                 Description = ChangesetDescription.ChangesetDescription message
             }
