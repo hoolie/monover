@@ -4,6 +4,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <RootNamespace>MonoVer.Domain</RootNamespace>
+        <VersionPrefix>0.1.0</VersionPrefix>
     </PropertyGroup>
 
     <ItemGroup>

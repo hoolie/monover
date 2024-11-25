@@ -5,6 +5,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>monover</ToolCommandName>
+        <VersionPrefix>0.1.0</VersionPrefix>
     </PropertyGroup>
 
     <ItemGroup>
