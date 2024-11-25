@@ -11,7 +11,7 @@ type UnvalidatedAffectedProject = {
       Impact: SemVerImpact
 }
 type PublishError = FailedToParseChangeset of (ChangesetId * string)
-                    |ProjectNotFound of string
+                    | ProjectNotFound of (ChangesetId * string)
 type UnvalidatedChangeset = {
     Id: ChangesetId
     AffectedProjects: UnvalidatedAffectedProject list
@@ -80,13 +80,13 @@ module Changeset =
 
     let private validateAffectedProject
         (projectIds:ProjectId list)
-        (affectedProject:UnvalidatedAffectedProject):Result<AffectedProject,PublishError> =
+        (affectedProject:UnvalidatedAffectedProject):Result<AffectedProject, string> =
         let projectId = (affectedProject.Project|> ProjectId)
         match Seq.contains projectId projectIds with
         | true -> Result.Ok {Impact = affectedProject.Impact; Project= projectId}
-        | false -> Result.Error (ProjectNotFound affectedProject.Project)
+        | false -> Result.Error  affectedProject.Project
         
-    let Validate (projectIds) :ValidateChangeset = function
+    let Validate (projectIds) (id: ChangesetId) :ValidateChangeset = function
         x -> x.AffectedProjects
              |> Seq.map (validateAffectedProject projectIds)
              |> FSharpPlus.Operators.sequence
@@ -96,6 +96,8 @@ module Changeset =
                  Description = x.Description
                  AffectedProjects = Seq.toList affectedProjects  
              })
+             |> Result.mapError (fun project -> ProjectNotFound (id,project))
+             
         
     let ParseRaw
         (validProjectIds:ProjectId list) // dependency
@@ -104,7 +106,7 @@ module Changeset =
         content
         |> Parse id
         |> Result.mapError (fun e -> FailedToParseChangeset(id, e))
-        |> Result.bind  (Validate validProjectIds)
+        |> Result.bind (Validate validProjectIds id)
 
     let appendLine (content: string) (sb: StringBuilder) = sb.AppendLine(content)
     let serializeAffectedProject
