@@ -9,18 +9,23 @@ module Projects =
     open MonoVer.Domain
 
     type Reference = string
+
     type private SlnProjectWithReferences =
-        {
-         Version: Version
-         ProjectId: ProjectId
-         ProjectFile: string
-         References: Reference seq}
+        { Version: Version
+          ProjectId: ProjectId
+          ProjectFile: string
+          References: Reference seq }
 
+    let tryGetVersionPrefix (project: MsProject) =
+        let versionPrefix = project.GetProperty("VersionPrefix")
+        match versionPrefix.IsImported with
+        | true -> None
+        | false -> Some (Version.FromString versionPrefix.EvaluatedValue)
 
-    let private parseLoadedProject (p: MsProject) : SlnProjectWithReferences =
-        let projectName= p.GetPropertyValue("MsBuildProjectName")
+    let private parseLoadedProject (p: MsProject) : SlnProjectWithReferences seq =
+        let projectName = p.GetPropertyValue("MsBuildProjectName")
         let projectId = ProjectId projectName
-        let version = Version.FromString(p.GetPropertyValue("Version"))
+        let version = tryGetVersionPrefix p
         let projectReferences = p.GetItems("ProjectReference")
 
         let deps =
@@ -30,10 +35,14 @@ module Projects =
             |> Seq.map FileInfo
             |> Seq.map _.FullName
 
-        {Version=version
-         ProjectId = projectId
-         ProjectFile = p.FullPath
-         References =  deps}
+        version
+        |> Option.map (fun version ->
+            { Version = version
+              ProjectId = projectId
+              ProjectFile = p.FullPath
+              References = deps })
+        |> Option.toList
+        |> List.toSeq
 
     // Function to create a graph of Projects from a sequence of SlnProjectWithReferences
     let private createGraph (projectsWithRefs: SlnProjectWithReferences seq) =
@@ -48,14 +57,17 @@ module Projects =
 
         // Recursive function to resolve dependencies and create fully connected Project nodes
         let rec resolveProject (project: SlnProjectWithReferences) : Project =
-            let {ProjectId = projectId; ProjectFile = csproj; Version=version} = project
+            let { ProjectId = projectId
+                  ProjectFile = csproj
+                  Version = version } =
+                project
 
             match resolvedProjects.TryGetValue(csproj) with
             | true, proj -> proj // Return already resolved Project
             | _ ->
                 // Find the SlnProjectWithReferences associated with the project
-                let projectWithRefs = projectsWithRefs
-                                      |> Seq.tryFind (fun p -> p.ProjectFile = csproj)
+                let projectWithRefs =
+                    projectsWithRefs |> Seq.tryFind (fun p -> p.ProjectFile = csproj)
 
                 match projectWithRefs with
                 | Some proj ->
@@ -86,7 +98,7 @@ module Projects =
                     proj
 
         // Step 3: Resolve all projects starting from each project in the input
-        projectsWithRefs  |> Seq.map resolveProject |> Seq.toList // Convert to list or keep as sequence
+        projectsWithRefs |> Seq.map resolveProject |> Seq.toList // Convert to list or keep as sequence
 
     let FromSolution (solution: MsSolution) =
-        solution |> Map.values |> Seq.map parseLoadedProject |> createGraph
+        solution |> Map.values |> Seq.collect parseLoadedProject |> createGraph
