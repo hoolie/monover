@@ -2,6 +2,7 @@
 
 open System
 open CommandLine
+open CommandLine.Text
 open Microsoft.Build.Locator
 open MonoVer
 open MonoVer.Cli
@@ -31,12 +32,24 @@ let runCommand (command: Parsed<obj>) =
     | Error e -> printError e
     | _ -> 0
 
+let displayHelp (result: ParserResult<'a>) =
+    let configureHelpText (h:HelpText) =
+        h.Copyright <- ""
+        h.AdditionalNewLineAfterOption <- false
+        HelpText.DefaultParsingErrorsHandler(result, h)
+
+    let helpText = HelpText.AutoBuild(result, configureHelpText, id)
+    Console.WriteLine helpText
+    -1
+
 [<EntryPoint>]
 let main argv =
+    let parser = new Parser(fun c -> c.HelpWriter <- null)
+
     let options =
-        Parser.Default.ParseArguments<PublishOptions, NewChangesetOption, InitOptions> argv
+        parser.ParseArguments<PublishOptions, NewChangesetOption, InitOptions> argv
 
     match options with
     | :? Parsed<obj> as command -> runCommand command
-    | :? NotParsed<obj> as p -> printError (MissingCommand())
+    | :? NotParsed<obj> as err -> displayHelp err
     | _ -> -1
