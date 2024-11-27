@@ -1,35 +1,21 @@
 namespace MonoVer.Domain
 
-open FSharpPlus.Data
-
-type Project = {
-    Id: ProjectId
-    CurrentVersion: VersionPrefix
-    Dependencies: Project list
-}
+type Project =
+    { Id: ProjectId
+      CurrentVersion: VersionPrefix
+      Dependencies: Project list }
 
 type Projects = Project list
-    
+
 type RawChangesets = RawChangeset list
-
-
-
-type ProjectChange =
-    { ChangesetId: ChangesetId
-      Project: Project
-      Impact: SemVerImpact
-      Description: ChangeDescription option
-      DependencyGraph: Project list }
-
-    
-
 
 type NewChangelogEntry =
     { Project: ProjectId
       Changes: ChangeDescriptions
       Version: Version }
 
-type VersionIncreased = { Project: ProjectId; Version: Version }
+type VersionIncreased =
+    { Project: ProjectId; Version: Version }
 
 
 type PublishEvent =
@@ -37,12 +23,20 @@ type PublishEvent =
     | VersionIncreased of VersionIncreased
     | ChangesetApplied of ChangesetId
 
-type MergedChangesets = Result<PublishEvent list, PublishError>
-type ProcessChangesets = VersionSuffix -> RawChangesets -> MergedChangesets
-module Changesets = 
+type PublishResult = Result<PublishEvent list, PublishError>
+type ProcessChangesets = RawChangesets -> PublishResult
+
+module Changesets =
 
 
-    let ParseRaw projectIds = List.map (Changeset.ParseRaw projectIds) >> FSharpPlus.Operators.sequence
+    type private ProjectChange =
+        { ChangesetId: ChangesetId
+          Project: Project
+          Impact: SemVerImpact
+          Description: ChangeDescription option
+          DependencyGraph: Project list }
+    let private ParseRaw projectIds =
+        List.map (Changeset.ParseRaw projectIds) >> FSharpPlus.Operators.sequence
 
     let private dependsOn (dependant: Project) (project: Project) =
         project.Dependencies |> List.exists (fun x -> x.Id = dependant.Id)
@@ -56,9 +50,10 @@ module Changesets =
         (affectedProject: AffectedProject)
         =
         let project = findProjectByCsproj projects affectedProject.Project
+
         let description =
             match changeset.Description with
-            | ChangesetDescription desc -> Some (ChangeDescription desc)
+            | ChangesetDescription desc -> Some(ChangeDescription desc)
             | Empty -> None
 
         { ChangesetId = changeset.Id
@@ -71,14 +66,15 @@ module Changesets =
         changeset.AffectedProjects
         |> List.map (projectChangeFromAffectedProject projects changeset)
 
-    let rec publishTransientUpdates (projects: Project list) (projectChange: ProjectChange) : ProjectChange list =
+    let rec private publishTransientUpdates (projects: Project list) (projectChange: ProjectChange) : ProjectChange list =
         let updateProject project =
             let (ProjectId projectId) = projectChange.Project.Id
+
             let projectChange =
                 { projectChange with
                     Impact = Patch
                     Project = project
-                    Description = Some (ChangeDescription $"updated dependency { projectId }")
+                    Description = Some(ChangeDescription $"updated dependency {projectId}")
                     DependencyGraph = project :: projectChange.DependencyGraph }
 
             projectChange :: (publishTransientUpdates projects projectChange)
@@ -93,15 +89,18 @@ module Changesets =
     let private closestChange ((_: ChangesetId, changes: ProjectChange list)) =
         changes |> List.sortBy (_.DependencyGraph.Length) |> List.head
 
-    let private toDescriptionWithImpact(change: ProjectChange): DescriptionWithImpact option=
+    let private toDescriptionWithImpact (change: ProjectChange) : DescriptionWithImpact option =
         change.Description
-        |> Option.map(fun desc -> {Impact = change.Impact; Description = desc })
-        
-    let private toChanges versionSuffix cumulatedChanges : PublishEvent list =
+        |> Option.map (fun desc ->
+            { Impact = change.Impact
+              Description = desc })
+
+    let private collectChanges versionSuffix cumulatedChanges : PublishEvent list =
         let (project: Project, changes: ProjectChange list) = cumulatedChanges
 
         let filteredChanges =
             changes |> List.groupBy (_.ChangesetId) |> List.map closestChange
+
         let descriptionsByImpact =
             filteredChanges
             |> List.map toDescriptionWithImpact
@@ -125,23 +124,34 @@ module Changesets =
                     Patch = project.CurrentVersion.Patch + 1u }
 
         let nextVersion = Version.Create nextVersionPrefix versionSuffix
+
         [ NewChangelogEntry
-              { Project =  project.Id
+              { Project = project.Id
                 Changes = ChangeDescriptions.Create descriptionsByImpact
                 Version = nextVersion }
           VersionIncreased
-              { Project =  project.Id
+              { Project = project.Id
                 Version = nextVersion } ]
+
     open FSharpPlus
-    let Publish projects : ProcessChangesets =
-        fun versionSuffix rawChangesets -> 
-            (ParseRaw (projects|>> _.Id) rawChangesets 
-            |>> (fun changesets ->
-                (List.collect(splitChangeset projects) changesets
-                >>= publishTransientUpdates projects
-                |> groupBy (_.Project)
-                >>= toChanges versionSuffix)
-                @ (rawChangesets |>> fst |>> ChangesetApplied))
-            )
-            
-            
+
+    let Publish projects versionSuffix: ProcessChangesets =
+        let projectIds = (projects |>> _.Id)
+        let parseChangesets = ParseRaw projectIds
+        let splitChangeset = splitChangeset projects
+        let publishTransientUpdates = publishTransientUpdates projects
+        let groupByProject (changes: ProjectChange list) = changes |> List.groupBy (_.Project)
+        let collectChanges = collectChanges versionSuffix
+
+        fun rawChangesets ->
+            monad {
+                let! changesets = parseChangesets rawChangesets
+                let changeEvents = 
+                     changesets
+                     >>= splitChangeset
+                     >>= publishTransientUpdates
+                     |> groupByProject
+                     >>= collectChanges
+                let appliedChangesetEvents  = (rawChangesets |>> fst |>> ChangesetApplied)
+                changeEvents @ appliedChangesetEvents
+            }
