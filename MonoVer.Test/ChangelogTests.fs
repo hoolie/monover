@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 """
         let entry:ChangelogVersionEntry = {
-            Version = Version.FromString("1.0.0")
+            Version = ReleaseVersion (VersionPrefix.FromString("1.0.0"))
             Date = DateOnly.Parse("2024-10-15")
             Changes = { ChangeDescriptions.Empty with Major = [ChangeDescription "First release" ]}
         }
@@ -38,7 +38,7 @@ First release"""
 - Initial release
 """
         let entry:ChangelogVersionEntry = {
-            Version = Version.FromString("1.1.0")
+            Version = ReleaseVersion (VersionPrefix.FromString("1.1.0"))
             Date = DateOnly.Parse("2024-10-15")
             Changes = { ChangeDescriptions.Empty with Minor = [ChangeDescription "Added Feature X\n" ]}
         }
@@ -59,7 +59,7 @@ Added Feature X
 - Initial release
 """
         let entry:ChangelogVersionEntry = {
-            Version = Version.FromString("1.1.0")
+            Version = ReleaseVersion (VersionPrefix.FromString("1.1.0"))
             Date = DateOnly.Parse("2024-10-15")
             Changes = { ChangeDescriptions.Empty
                         with
@@ -115,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed some stuff
 """
         let entry:ChangelogVersionEntry = {
-            Version = Version.FromString("1.1.1")
+            Version = ReleaseVersion (VersionPrefix.FromString("1.1.1"))
             Date = DateOnly.Parse("2024-10-15")
             Changes = {ChangeDescriptions.Empty
                        with

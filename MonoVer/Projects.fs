@@ -11,7 +11,7 @@ module Projects =
     type Reference = string
 
     type private SlnProjectWithReferences =
-        { Version: Version
+        { Version: VersionPrefix
           ProjectId: ProjectId
           ProjectFile: string
           References: Reference seq }
@@ -20,7 +20,7 @@ module Projects =
         let versionPrefix = project.GetProperty("VersionPrefix")
         match versionPrefix.IsImported with
         | true -> None
-        | false -> Some (Version.FromString versionPrefix.EvaluatedValue)
+        | false -> Some (VersionPrefix.FromString versionPrefix.EvaluatedValue)
 
     let private parseLoadedProject (p: MsProject) : SlnProjectWithReferences seq =
         let projectName = p.GetPropertyValue("MsBuildProjectName")

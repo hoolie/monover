@@ -7,7 +7,7 @@ open NUnit.Framework
 
 // Mock data
 let mockFileInfo path = ProjectId(path)
-
+let NoSuffix = VersionSuffix ""
 let shouldBeOk result =
     match result with
     | Ok value -> value
@@ -23,7 +23,7 @@ let mockProject name version dependencies : Project =
       CurrentVersion = version
       Dependencies = dependencies }
 
-let mockVersion major minor patch : Version =
+let mockVersion major minor patch : VersionPrefix =
     { Major = major
       Minor = minor
       Patch = patch }
@@ -41,7 +41,7 @@ let mockTargetProject name = ProjectId name
 
 let NewChangelogEntry (project:Project)(version:string) =
     NewChangelogEntry {
-        Version = Version.FromString version
+        Version = ReleaseVersion (VersionPrefix.FromString version)
         Project = project.Id
         Changes = ChangeDescriptions.Empty
     }
@@ -63,7 +63,7 @@ let Patch desc (event: PublishEvent):PublishEvent =
 let VersionIncreased (project:Project) (version:string) =
     VersionIncreased
       { Project = project.Id
-        Version = Version.FromString version }
+        Version = ReleaseVersion (VersionPrefix.FromString version )}
 let ChangesetApplied ((id,_): RawChangeset) =
     ChangesetApplied id
 // Unit tests
@@ -72,7 +72,7 @@ let ChangesetApplied ((id,_): RawChangeset) =
 let ``No changesets results in no publish results`` () =
     let projects = [ mockProject "TestProject" (mockVersion 1u 0u 0u) [] ]
     let changesets = []
-    let result = Changesets.Publish projects changesets
+    let result = Changesets.Publish projects NoSuffix changesets
     let value = shouldBeOk result
     value |> should be Empty
 
@@ -90,7 +90,7 @@ New feature"""
 
     let projects = [ project ]
     let changesets = [ changeset ]
-    let result = Changesets.Publish projects changesets
+    let result = Changesets.Publish projects NoSuffix changesets
     let value = shouldBeOk result
 
     value
@@ -126,7 +126,7 @@ Bug fix"""
 
     let projects = [ project ]
     let changesets = [ changeset1; changeset2 ]
-    let result = Changesets.Publish projects changesets
+    let result = Changesets.Publish projects NoSuffix changesets
     let events = shouldBeOk result
 
     events
@@ -153,7 +153,7 @@ New feature
 
     let projects = [ project ]
     let changesets = [ changeset ]
-    let result = Changesets.Publish projects changesets
+    let result = Changesets.Publish projects NoSuffix changesets
     let value = shouldBeOk result
     value |> should equivalent [
         ChangesetApplied changeset
@@ -177,7 +177,7 @@ let ``Transitive dependencies are correctly updated`` () =
 Feature in ProjectA"""
 
     let changesets = [ changeset ]
-    let result = Changesets.Publish projects changesets
+    let result = Changesets.Publish projects NoSuffix changesets
     let events = shouldBeOk result
     events  |> should equivalent [
         
@@ -208,7 +208,7 @@ Feature in ProjectA
 Fix in ProjectB"""
 
     let changesets = [ changeset ]
-    let result = Changesets.Publish projects changesets
+    let result = Changesets.Publish projects NoSuffix changesets
     let events = shouldBeOk result
 
     events
@@ -243,6 +243,6 @@ let ``Changeset with invalid projects should yield an error`` () =
 
     let projects = [ project ]
     let changesets = [ changeset ]
-    let result = Changesets.Publish projects changesets
+    let result = Changesets.Publish projects NoSuffix changesets
     shouldBeError result |> ignore
    

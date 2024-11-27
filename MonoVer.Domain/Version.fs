@@ -1,17 +1,25 @@
 namespace MonoVer.Domain
 
-type Version =
+type VersionPrefix =
     { Major: uint
       Minor: uint
       Patch: uint }
 
+type VersionSuffix = VersionSuffix of string
+
+type Version =
+    | PreviewVersion of VersionPrefix * VersionSuffix
+    | ReleaseVersion of VersionPrefix
+            
+
 type InvalidVersionFormat = InvalidVersionFormat of string
-module Version =
+
+module VersionPrefix =
 
     open System.Text.RegularExpressions
     open FSharpPlus
 
-    let private Create major minor patch : Version =
+    let private Create major minor patch : VersionPrefix =
         { Major = major
           Minor = minor
           Patch = patch }
@@ -27,7 +35,7 @@ module Version =
         else
             Result.Error(InvalidVersionFormat content)
 
-    let TryFromString (raw: string) : Result<Version, InvalidVersionFormat> =
+    let TryFromString (raw: string) : Result<VersionPrefix, InvalidVersionFormat> =
         monad {
             let! groups = MatchVersion raw
             let major = System.UInt32.Parse(groups[1].Value)
@@ -40,10 +48,23 @@ module Version =
         (function
         | InvalidVersionFormat e -> System.Exception e)
 
-    let FromString (raw: string) : Version =
+    let FromString (raw: string) : VersionPrefix =
         match (TryFromString raw) with
         | Ok t -> t
         | Error e -> raise (ErrorToException e)
 
-    let ToString ({Major=major; Minor=minor; Patch=patch}: Version) =
+    let ToString
+        ({ Major = major
+           Minor = minor
+           Patch = patch }: VersionPrefix)
+        =
         $"{major}.{minor}.{patch}"
+module Version =
+    let Create prefix (VersionSuffix suffix): Version =
+        match (System.String.IsNullOrWhiteSpace suffix) with
+        | false -> PreviewVersion (prefix, VersionSuffix suffix)
+        | true -> ReleaseVersion prefix
+    let toString = function
+        | ReleaseVersion x -> VersionPrefix.ToString x
+        | PreviewVersion (prefix,suffix) -> $"{VersionPrefix.ToString prefix}-{suffix}"
+    

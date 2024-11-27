@@ -23,7 +23,9 @@ type PublishOptions =
     { [<Option(Default = ".")>]
       Workdir: string
       [<Option(Default = ".changesets")>]
-      Changesets: string }
+      Changesets: string
+      [<Option("version-suffix",Default = "")>]
+      VersionSuffix: string }
 
 
 let CHANGELOG_TEMPLATE =
@@ -52,12 +54,12 @@ let private loadSolution workdir =
     MsProjects.TryLoadFrom workdir
     |> Result.mapError MsProjectsError
    
-let private updateVersion solution (newVersion: VersionIncreased) =
-     Console.WriteLine $"Increase version of '{newVersion.Project}' to '{Version.ToString newVersion.Version}'"
-     ApplyChanges solution newVersion
+let private updateVersion solution (event: VersionIncreased) =
+     Console.WriteLine $"Increase version of '{event.Project}' to '{Version.toString event.Version}'"
+     ApplyChanges solution event
      |> Result.mapError PublishDomainErrors.UpdateVersionError
                                       
-let private processChangesets projects = Changesets.Publish projects >> (Result.mapError PublishDomainErrors.PublishError)
+let private processChangesets projects versionSuffix = (Changesets.Publish projects versionSuffix) >> (Result.mapError PublishDomainErrors.PublishError)
 let private updateChangelog (solution:MsProjects.MsSolution) ({Project = project; Changes = changes; Version = version}: NewChangelogEntry) =
         let project =
             Map.tryFind project solution
@@ -88,7 +90,7 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
         let projects = Projects.FromSolution solution
                              
         // publish
-        let! publishResult = processChangesets projects rawChangesets
+        let! publishResult = processChangesets projects (VersionSuffix args.VersionSuffix) rawChangesets
         // execute changes
         return! publishResult
                         |> List.map (function
@@ -104,5 +106,5 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
         | PublishError (ProjectNotFound (ChangesetId id, p)) -> CommandError (-4, $"""Failed to parse Changeset with name {id}.md: project with name {p} not found""" )
         | MsProjectsError (SolutionFileNotFoundInWorkdir x) -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
         | MsProjectsError (MultipleSolutionFilesFoundInWorkdir x) -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
-        | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project} to version {Version.ToString e.Version} ")
+        | UpdateVersionError (FailedToUpdateVersionInFile e) -> CommandError (-7, $"Failed to update file {e.Project} to version {Version.toString e.Version} ")
         )

@@ -4,7 +4,7 @@ open FSharpPlus.Data
 
 type Project = {
     Id: ProjectId
-    CurrentVersion: Version
+    CurrentVersion: VersionPrefix
     Dependencies: Project list
 }
 
@@ -38,7 +38,7 @@ type PublishEvent =
     | ChangesetApplied of ChangesetId
 
 type MergedChangesets = Result<PublishEvent list, PublishError>
-type ProcessChangesets = RawChangesets -> MergedChangesets
+type ProcessChangesets = VersionSuffix -> RawChangesets -> MergedChangesets
 module Changesets = 
 
 
@@ -97,7 +97,7 @@ module Changesets =
         change.Description
         |> Option.map(fun desc -> {Impact = change.Impact; Description = desc })
         
-    let private toChanges cumulatedChanges : PublishEvent list =
+    let private toChanges versionSuffix cumulatedChanges : PublishEvent list =
         let (project: Project, changes: ProjectChange list) = cumulatedChanges
 
         let filteredChanges =
@@ -109,7 +109,7 @@ module Changesets =
 
         let highestImpact = filteredChanges |> List.map (_.Impact) |> List.sort |> List.head
 
-        let nextVersion =
+        let nextVersionPrefix =
             match highestImpact with
             | SemVerImpact.Major ->
                 { project.CurrentVersion with
@@ -124,7 +124,7 @@ module Changesets =
                 { project.CurrentVersion with
                     Patch = project.CurrentVersion.Patch + 1u }
 
-
+        let nextVersion = Version.Create nextVersionPrefix versionSuffix
         [ NewChangelogEntry
               { Project =  project.Id
                 Changes = ChangeDescriptions.Create descriptionsByImpact
@@ -134,13 +134,13 @@ module Changesets =
                 Version = nextVersion } ]
     open FSharpPlus
     let Publish projects : ProcessChangesets =
-        fun rawChangesets -> 
+        fun versionSuffix rawChangesets -> 
             (ParseRaw (projects|>> _.Id) rawChangesets 
             |>> (fun changesets ->
                 (List.collect(splitChangeset projects) changesets
                 >>= publishTransientUpdates projects
                 |> groupBy (_.Project)
-                >>= toChanges)
+                >>= toChanges versionSuffix)
                 @ (rawChangesets |>> fst |>> ChangesetApplied))
             )
             

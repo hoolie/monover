@@ -28,7 +28,7 @@ module Changelog =
         |> List.filter(fun (_,e) -> not (Seq.isEmpty e))
         |> List.collect (fun (section, content) -> $"### {section}" :: (content|>> fun(ChangeDescription desc) -> desc ))
     let format (entry:ChangelogVersionEntry) =
-         $"## [{Version.ToString entry.Version}] - {entry.Date:``yyyy-MM-dd``}"
+         $"## [{Version.toString entry.Version}] - {entry.Date:``yyyy-MM-dd``}"
             :: (formatChanges entry.Changes)
         
     let AddEntry (rawChangelog: Changelog) (entry: ChangelogVersionEntry)  =
