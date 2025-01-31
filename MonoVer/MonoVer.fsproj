@@ -5,7 +5,16 @@
         <TargetFramework>net8.0</TargetFramework>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>monover</ToolCommandName>
+        <Authors>julian.liebert@web.de</Authors>
         <VersionPrefix>0.1.0</VersionPrefix>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+        <EnablePackageValidation>true</EnablePackageValidation>
+        <RepositoryUrl>https://github.com/hoolie/monover</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/hoolie/monover</PackageProjectUrl>
+        <Description>MonoVer is a version management tool designed for mono-repositories and single-project repositories. It automates versioning, changelog updates, and publishing workflows, making it easier to manage and track changes across multiple projects.</Description>
+        <PackageTags>versioning,changelog,monorepo,semver,dotnet-tool,NuGet,ci-cd,automation,release-management,package-management,changeset,build-tools,devops</PackageTags>
+        <PackageIcon>monover-icon.png</PackageIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,6 +27,9 @@
         <Compile Include="CreateChangesetCommand.fs" />
         <Compile Include="InitCommand.fs" />
         <Compile Include="Program.fs" />
+        <None Include="../README.md" Pack="true" PackagePath="/" />
+        <None Include="../LICENSE.md" Pack="true" PackagePath="/" />
+        <None Include="monover-icon.png" Pack="true" PackagePath="/" />
     </ItemGroup>
 
     <ItemGroup>
@@ -39,6 +51,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\MonoVer.Domain\MonoVer.Domain.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="monover-icon.png" />
     </ItemGroup>
 
 </Project>
