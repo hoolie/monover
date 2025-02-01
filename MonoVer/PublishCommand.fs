@@ -91,7 +91,7 @@ let private updateChangelog
 let private deleteChangeset (ChangesetId id) =
     Console.WriteLine $"Delete file '{id}'"
     Ok(
-    //File.Delete id
+    File.Delete id
     )
 
 let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
@@ -122,7 +122,7 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
         | PublishError(FailedToParseChangeset(ChangesetId x, e)) ->
             CommandError(-4, $"""Failed to parse Changeset with name {x}.md:{e}""")
         | PublishError(ProjectNotFound(ChangesetId id, p)) ->
-            CommandError(-4, $"""Failed to parse Changeset with name {id}.md: project with name {p} not found""")
+            CommandError(-4, $"""Failed to parse Changeset with name {id}: project with name {p} not found""")
         | MsProjectsError(SolutionFileNotFoundInWorkdir x) ->
             CommandError(-5, $"Could not find any solution file in working directory '{x}'")
         | MsProjectsError(MultipleSolutionFilesFoundInWorkdir x) ->

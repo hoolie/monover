@@ -1,60 +1,53 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-        <PackAsTool>true</PackAsTool>
-        <ToolCommandName>monover</ToolCommandName>
-        <Authors>julian.liebert@web.de</Authors>
-        <VersionPrefix>0.1.0</VersionPrefix>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-        <EnablePackageValidation>true</EnablePackageValidation>
-        <RepositoryUrl>https://github.com/hoolie/monover</RepositoryUrl>
-        <PackageProjectUrl>https://github.com/hoolie/monover</PackageProjectUrl>
-        <Description>MonoVer is a version management tool designed for mono-repositories and single-project repositories. It automates versioning, changelog updates, and publishing workflows, making it easier to manage and track changes across multiple projects.</Description>
-        <PackageTags>versioning,changelog,monorepo,semver,dotnet-tool,NuGet,ci-cd,automation,release-management,package-management,changeset,build-tools,devops</PackageTags>
-        <PackageIcon>monover-icon.png</PackageIcon>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <Compile Include="Changelog.fs" />
-        <Compile Include="MsProjects.fs" />
-        <Compile Include="Projects.fs" />
-        <Compile Include="UpdateCsproj.fs" />
-        <Compile Include="ApplicationError.fs" />
-        <Compile Include="PublishCommand.fs" />
-        <Compile Include="CreateChangesetCommand.fs" />
-        <Compile Include="InitCommand.fs" />
-        <Compile Include="Program.fs" />
-        <None Include="../README.md" Pack="true" PackagePath="/" />
-        <None Include="../LICENSE.md" Pack="true" PackagePath="/" />
-        <None Include="monover-icon.png" Pack="true" PackagePath="/" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="CommandLineParser" Version="2.9.1" />
-      <PackageReference Include="FParsec" Version="1.1.1" />
-      <PackageReference Include="FSharpPlus" Version="1.6.1" />
-      <PackageReference Include="Microsoft.Build" Version="17.11.4" ExcludeAssets="runtime" />
-      <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime" />
-      <PackageReference Include="Microsoft.Build.Locator" Version="1.7.8" />
-      <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-      <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Markdig">
-        <HintPath>..\..\..\.nuget\packages\markdig\0.37.0\lib\net8.0\Markdig.dll</HintPath>
-      </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\MonoVer.Domain\MonoVer.Domain.fsproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Content Include="monover-icon.png" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>monover</ToolCommandName>
+    <Authors>julian.liebert@web.de</Authors>
+    <VersionPrefix>0.1.1</VersionPrefix>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <RepositoryUrl>https://github.com/hoolie/monover</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/hoolie/monover</PackageProjectUrl>
+    <Description>MonoVer is a version management tool designed for mono-repositories and single-project repositories. It automates versioning, changelog updates, and publishing workflows, making it easier to manage and track changes across multiple projects.</Description>
+    <PackageTags>versioning,changelog,monorepo,semver,dotnet-tool,NuGet,ci-cd,automation,release-management,package-management,changeset,build-tools,devops</PackageTags>
+    <PackageIcon>monover-icon.png</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Changelog.fs" />
+    <Compile Include="MsProjects.fs" />
+    <Compile Include="Projects.fs" />
+    <Compile Include="UpdateCsproj.fs" />
+    <Compile Include="ApplicationError.fs" />
+    <Compile Include="PublishCommand.fs" />
+    <Compile Include="CreateChangesetCommand.fs" />
+    <Compile Include="InitCommand.fs" />
+    <Compile Include="Program.fs" />
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+    <None Include="../LICENSE.md" Pack="true" PackagePath="/" />
+    <None Include="monover-icon.png" Pack="true" PackagePath="/" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
+    <PackageReference Include="FSharpPlus" Version="1.6.1" />
+    <PackageReference Include="Microsoft.Build" Version="17.11.4" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.4" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Locator" Version="1.7.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Markdig">
+      <HintPath>..\..\..\.nuget\packages\markdig\0.37.0\lib\net8.0\Markdig.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MonoVer.Domain\MonoVer.Domain.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="monover-icon.png" />
+  </ItemGroup>
 </Project>
