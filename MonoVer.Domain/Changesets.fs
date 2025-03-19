@@ -29,12 +29,17 @@ type ProcessChangesets = RawChangesets -> PublishResult
 module Changesets =
 
 
+    type private ChangeType =
+        | Explicit
+        | Transient
+
     type private ProjectChange =
         { ChangesetId: ChangesetId
           Project: Project
           Impact: SemVerImpact
           Description: ChangeDescription option
-          DependencyGraph: Project list }
+          ChangeType: ChangeType }
+
     let private ParseRaw projectIds =
         List.map (Changeset.ParseRaw projectIds) >> FSharpPlus.Operators.sequence
 
@@ -60,22 +65,26 @@ module Changesets =
           Project = project
           Impact = affectedProject.Impact
           Description = description
-          DependencyGraph = [ project ] }
+          ChangeType = Explicit }
 
     let private splitChangeset (projects: Project list) (changeset: ValidChangeset) : ProjectChange list =
         changeset.AffectedProjects
         |> List.map (projectChangeFromAffectedProject projects changeset)
 
-    let rec private publishTransientUpdates (projects: Project list) (projectChange: ProjectChange) : ProjectChange list =
+    let rec private publishTransientUpdates
+        (projects: Project list)
+        (projectChange: ProjectChange)
+        : ProjectChange list =
         let updateProject project =
             let (ProjectId projectId) = projectChange.Project.Id
+            let changesetId = projectChange.ChangesetId
 
             let projectChange =
-                { projectChange with
-                    Impact = Patch
-                    Project = project
-                    Description = Some(ChangeDescription $"updated dependency {projectId}")
-                    DependencyGraph = project :: projectChange.DependencyGraph }
+                { ChangesetId = changesetId
+                  Impact = Patch
+                  Project = project
+                  Description = Some(ChangeDescription $"updated dependency {projectId}")
+                  ChangeType = Transient }
 
             projectChange :: (publishTransientUpdates projects projectChange)
 
@@ -86,8 +95,10 @@ module Changesets =
 
 
 
-    let private closestChange ((_: ChangesetId, changes: ProjectChange list)) =
-        changes |> List.sortBy (_.DependencyGraph.Length) |> List.head
+    let private overrideTransientChanges ((_: ChangesetId, changes: ProjectChange list)) =
+        match (changes |> List.forall (fun t -> t.ChangeType = Transient)) with
+        | true -> changes
+        | _ -> changes |> List.filter (fun c -> c.ChangeType = Explicit)
 
     let private toDescriptionWithImpact (change: ProjectChange) : DescriptionWithImpact option =
         change.Description
@@ -99,7 +110,11 @@ module Changesets =
         let (project: Project, changes: ProjectChange list) = cumulatedChanges
 
         let filteredChanges =
-            changes |> List.groupBy (_.ChangesetId) |> List.map closestChange
+            changes
+            |> List.distinct
+            |> List.groupBy (_.ChangesetId)
+            |> List.collect overrideTransientChanges
+
 
         let descriptionsByImpact =
             filteredChanges
@@ -135,7 +150,7 @@ module Changesets =
 
     open FSharpPlus
 
-    let Publish projects versionSuffix: ProcessChangesets =
+    let Publish projects versionSuffix : ProcessChangesets =
         let projectIds = (projects |>> _.Id)
         let parseChangesets = ParseRaw projectIds
         let splitChangeset = splitChangeset projects
@@ -146,12 +161,14 @@ module Changesets =
         fun rawChangesets ->
             monad {
                 let! changesets = parseChangesets rawChangesets
-                let changeEvents = 
-                     changesets
-                     >>= splitChangeset
-                     >>= publishTransientUpdates
-                     |> groupByProject
-                     >>= collectChanges
-                let appliedChangesetEvents  = (rawChangesets |>> fst |>> ChangesetApplied)
+
+                let changeEvents =
+                    changesets
+                    >>= splitChangeset
+                    >>= publishTransientUpdates
+                    |> groupByProject
+                    >>= collectChanges
+
+                let appliedChangesetEvents = (rawChangesets |>> fst |>> ChangesetApplied)
                 changeEvents @ appliedChangesetEvents
             }

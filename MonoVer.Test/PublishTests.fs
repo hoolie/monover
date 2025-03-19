@@ -246,3 +246,25 @@ let ``Changeset with invalid projects should yield an error`` () =
     let result = Changesets.Publish projects NoSuffix changesets
     shouldBeError result |> ignore
    
+[<Test>]
+let ``Diamond Problem should include all dependencies`` () =
+    let baseProject = mockProject "BaseProject" (mockVersion 1u 0u 0u) []
+    let libA = mockProject "LibA" (mockVersion 1u 0u 0u) [baseProject]
+    let libB = mockProject "LibB" (mockVersion 1u 0u 0u) [baseProject]
+    let application = mockProject "application" (mockVersion 1u 0u 0u) [ libA; libB ]
+    
+    let changeset =
+        mockChangeset
+            "1"
+            """---
+    "BaseProject": minor
+    ---
+    # Added
+    New feature
+    """
+    
+    let projects = [ baseProject; libA; libB; application ]
+    let changesets = [ changeset ]
+    let result = Changesets.Publish projects NoSuffix changesets
+    let entries = result |> shouldBeOk |> List.choose (function NewChangelogEntry e when e.Project = ProjectId "application" -> Some e | _-> None)
+    entries.Head.Changes.Patch |> should haveLength 2
