@@ -6,6 +6,7 @@ open FSharpPlus
 open CommandLine
 open MonoVer.Cli
 open MonoVer.Domain
+open MonoVer.FileSystem
 
 [<Verb("new", HelpText = "Add a new changeset.")>]
 type NewChangesetOption =
@@ -18,7 +19,7 @@ type NewChangesetOption =
       Impact: string
       [<Option('p', "projects", Required = true, HelpText = "The project(s) that are affected")>]
       Projects: string seq
-      [<Option('m', "message", Required = true, HelpText = "The project(s) that are affected")>]
+      [<Option('m', "message", Required = true, HelpText = "A message that describes the change")>]
       Message: string
        }
    
@@ -26,8 +27,11 @@ type CreateChangesetError =
     | MsProjectsError of MsProjectsError
     | ParseImpactError of ParseImpactError
     | ProjectNotFound of string
-module CreateChangesetCommand =
+    | ChangesetRootNotFound of string
     
+module CreateChangesetCommand =
+            
+    let findRoot workdir = findRoot workdir |> Result.mapError (function | FindChangesetRootError.ChangesetRootNotFound x -> ChangesetRootNotFound x )
     let private tryFindProjectInSolution (solution: MsProjects.MsSolution) (projectName: string) =
             
             Map.keys solution
@@ -42,14 +46,16 @@ module CreateChangesetCommand =
         Message = message
         Workdir = workdir
     }: NewChangesetOption): Result<unit,ApplicationError> =
+        
         let changesetName =
             match String.IsNullOrWhiteSpace rawName with
             | true -> Guid.NewGuid().ToString()
             | false -> String.trimEnd ".md" rawName
         monad {
+            let! projectRoot = findRoot workdir 
             let! impact = SemVerImpact.Parse rawImpact
                             |> Result.mapError ParseImpactError
-            let! solution = MsProjects.TryLoadFrom workdir
+            let! solution = MsProjects.TryLoadFrom projectRoot
                             |> Result.mapError MsProjectsError
             let! validatedProjects =
                     projects
@@ -65,7 +71,7 @@ module CreateChangesetCommand =
                 AffectedProjects = affectedProjects
                 Description = ChangesetDescription.ChangesetDescription message
             }
-            File.WriteAllText (Path.Join(workdir, ".changesets", changesetName + ".md"), changeset)
+            File.WriteAllText (Path.Join(projectRoot, ".changesets", changesetName + ".md"), changeset)
             Console.WriteLine($"Created: {changesetName}.md")
             return ()
              
@@ -76,6 +82,7 @@ module CreateChangesetCommand =
             | MsProjectsError (MultipleSolutionFilesFoundInWorkdir x) -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
             | ParseImpactError (FailedToParseImpact rawImpact) -> CommandError (-8, $"Failed to parse impact: {rawImpact}")
             | ProjectNotFound project -> CommandError (-9, $"Project not found: {project}")
+            | ChangesetRootNotFound workdir -> CommandError (-10, $"The .changeset directory was not found in the upwards path of '{workdir}'")
             )
         
 

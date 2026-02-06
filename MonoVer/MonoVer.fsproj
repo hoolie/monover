@@ -16,11 +16,12 @@
     <PackageIcon>monover-icon.png</PackageIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ApplicationError.fs" />
+    <Compile Include="FileSystem.fs" />
     <Compile Include="Changelog.fs" />
     <Compile Include="MsProjects.fs" />
     <Compile Include="Projects.fs" />
     <Compile Include="UpdateCsproj.fs" />
-    <Compile Include="ApplicationError.fs" />
     <Compile Include="PublishCommand.fs" />
     <Compile Include="CreateChangesetCommand.fs" />
     <Compile Include="InitCommand.fs" />

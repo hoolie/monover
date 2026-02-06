@@ -10,12 +10,14 @@ open MonoVer.Changelog
 open MonoVer.Cli
 open MonoVer.Domain
 open MonoVer.UpdateCsproj
+open MonoVer.FileSystem
 
 
 type PublishDomainErrors =
     | MsProjectsError of MsProjectsError
     | UpdateVersionError of UpdateVersionError
     | PublishError of PublishError
+    | ChangesetRootNotFound of string
 
 
 [<Verb("publish", HelpText = "applies all open changesets.")>]
@@ -93,17 +95,24 @@ let private deleteChangeset (ChangesetId id) =
     Ok(
     File.Delete id
     )
+let findRoot workdir = findRoot workdir |> Result.mapError (function | FindChangesetRootError.ChangesetRootNotFound x -> ChangesetRootNotFound x )
 
-let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
-    let changesets = Path.Join(args.Workdir, args.Changesets)
-    let versionSuffix = VersionSuffix args.VersionSuffix
+let RunPublish ({
+    Workdir = workdir
+    VersionSuffix = versionSuffix
+    Changesets = changesetsPath
+    
+}: PublishOptions) : Result<unit, ApplicationError> =
+    let versionSuffix = VersionSuffix versionSuffix
     let processChangesets = processChangesets versionSuffix
 
     monad {
         // get all changesets
+        let! changesetRoot = findRoot workdir
+        let changesets = Path.Join(workdir, changesetsPath)
         let rawChangesets = loadRawChangesets changesets
         // get all projects
-        let! solution = loadSolution args.Workdir
+        let! solution = loadSolution workdir
         let projects = Projects.FromSolution solution
 
         // publish
@@ -128,4 +137,7 @@ let RunPublish (args: PublishOptions) : Result<unit, ApplicationError> =
         | MsProjectsError(MultipleSolutionFilesFoundInWorkdir x) ->
             CommandError(-6, $"""Found multiple solution file in working directory: {x}""")
         | UpdateVersionError(FailedToUpdateVersionInFile e) ->
-            CommandError(-7, $"Failed to update file {e.Project} to version {Version.toString e.Version} "))
+            CommandError(-7, $"Failed to update file {e.Project} to version {Version.toString e.Version} ")
+        | ChangesetRootNotFound workdir ->
+            CommandError (-10, $"The .changeset directory was not found in the upwards path of '{workdir}'")
+        )

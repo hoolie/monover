@@ -14,9 +14,10 @@ type InitOptions = {
 
 module InitCommand =
     let Run (): Result<unit,ApplicationError> =
-        if Directory.Exists(".changesets") then
+        if File.Exists(".changesets/config.json") then
             Console.WriteLine("MonoVer is already initialized")
         else
             Directory.CreateDirectory(".changesets") |> ignore
+            File.WriteAllText(".changeset/config.json", "{}")
         Ok ()
 
