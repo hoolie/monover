@@ -32,9 +32,9 @@ type CreateChangesetError =
 module CreateChangesetCommand =
             
     let findRoot workdir = findRoot workdir |> Result.mapError (function | FindChangesetRootError.ChangesetRootNotFound x -> ChangesetRootNotFound x )
-    let private tryFindProjectInSolution (solution: MsProjects.MsSolution) (projectName: string) =
-            
-            Map.keys solution
+    let private tryFindProjectInSolution (projects: Project list) (projectName: string) =
+            projects
+            |>> _.Id
             |> Seq.tryFind (fun key -> key = (ProjectId projectName))
             |> function
                 | Some project -> Ok project
@@ -55,12 +55,13 @@ module CreateChangesetCommand =
             let! projectRoot = findRoot workdir 
             let! impact = SemVerImpact.Parse rawImpact
                             |> Result.mapError ParseImpactError
-            let! solution = MsProjects.TryLoadFrom projectRoot
+            let! msProjects = MsProjects.TryLoadFrom projectRoot
+                            |>> Projects.FromSolution
                             |> Result.mapError MsProjectsError
             let! validatedProjects =
                     projects
                     |> Seq.toList
-                    |>> (tryFindProjectInSolution solution)
+                    |>> (tryFindProjectInSolution msProjects)
                     |> sequence
                     
             let affectedProjects =
@@ -81,7 +82,7 @@ module CreateChangesetCommand =
             | MsProjectsError (SolutionFileNotFoundInWorkdir x) -> CommandError (-5, $"Could not find any solution file in working directory '{x}'") 
             | MsProjectsError (MultipleSolutionFilesFoundInWorkdir x) -> CommandError (-6, $"""Found multiple solution file in working directory: {x}""")
             | ParseImpactError (FailedToParseImpact rawImpact) -> CommandError (-8, $"Failed to parse impact: {rawImpact}")
-            | ProjectNotFound project -> CommandError (-9, $"Project not found: {project}")
+            | ProjectNotFound project -> CommandError (-9, $"Project not found: {project}. Is the VersionPrefix property set?")
             | ChangesetRootNotFound workdir -> CommandError (-10, $"The .changeset directory was not found in the upwards path of '{workdir}'")
             )
         

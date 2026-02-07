@@ -15,7 +15,7 @@ module Projects =
           ProjectId: ProjectId
           ProjectFile: string
           References: Reference seq }
-
+        
     let tryGetVersionPrefix (project: MsProject) =
         let versionPrefix = project.GetProperty("VersionPrefix")
         match versionPrefix.IsImported with
